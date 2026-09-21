@@ -1,0 +1,100 @@
+{
+  "app": {
+    "title": "TermFlow",
+    "subtitle": "Terminal-First Project & Task Management UI",
+    "session": "Terminal Session",
+    "cmdShortcut": "Press Ctrl+K or : for command palette"
+  },
+  "nav": {
+    "board": "Board (Kanban)",
+    "list": "List View",
+    "grid": "Grid Table",
+    "timeline": "Timeline",
+    "zen": "Zen Mode",
+    "profile": "Profile"
+  },
+  "status": {
+    "todo": "To Do",
+    "in_progress": "In Progress",
+    "review": "In Review",
+    "done": "Done"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "task": {
+    "newTask": "Add New Task",
+    "titlePlaceholder": "Task title...",
+    "descPlaceholder": "Detailed description or notes...",
+    "subtasks": "Sub-tasks / Checklist",
+    "addSubtask": "Add item",
+    "assignee": "Assignee",
+    "priority": "Priority",
+    "dueDate": "Due Date",
+    "labels": "Labels / Tags",
+    "comments": "Comments & Activity",
+    "addComment": "Write a comment...",
+    "githubPr": "Linked GitHub Commit / PR",
+    "save": "Save Task",
+    "delete": "Delete Task",
+    "close": "Close",
+    "filterPlaceholder": "Filter tasks (e.g., status:todo priority:high)..."
+  },
+  "command": {
+    "placeholder": "Type command or search... (e.g. > new task 'Title' #tag @user)",
+    "title": "Terminal Command Palette",
+    "history": "Command History",
+    "suggestions": "Suggested Commands",
+    "execute": "Execute",
+    "noResults": "No matching commands found"
+  },
+  "theme": {
+    "title": "Terminal Theme",
+    "githubDark": "GitHub Dark",
+    "githubLight": "GitHub Light",
+    "dracula": "Dracula",
+    "nord": "Nord",
+    "solarized": "Solarized Dark",
+    "monokai": "Monokai",
+    "dimmed": "Dimmed Dark",
+    "highContrast": "High Contrast"
+  },
+  "profile": {
+    "title": "User Profile",
+    "completedTasks": "Tasks Completed",
+    "dailyStreak": "Daily Streak",
+    "totalTasks": "Total Tasks",
+    "achievements": "Badges & Achievements",
+    "contributionHeatmap": "Activity Graph (Last 365 Days)",
+    "activityLog": "Activity Log History"
+  },
+  "zen": {
+    "focusMode": "Zen Mode & Pomodoro",
+    "start": "Start Timer",
+    "pause": "Pause",
+    "reset": "Reset Timer",
+    "workSession": "Focus Session",
+    "breakSession": "Break",
+    "selectTask": "Select a task to focus on"
+  },
+  "cheatsheet": {
+    "title": "Keyboard Shortcuts Cheatsheet",
+    "cmdPalette": "Open Command Palette",
+    "navDownUp": "Navigate selection down / up",
+    "newTask": "Create new task",
+    "openDetail": "Open selected task detail",
+    "gotoProfile": "Go to Profile Page",
+    "gotoDashboard": "Go to Dashboard",
+    "cheatsheetKey": "Show this keyboard cheatsheet"
+  },
+  "export": {
+    "title": "Export Data",
+    "json": "Export to JSON",
+    "markdown": "Export to Markdown",
+    "csv": "Export to CSV"
+  }
+}
+

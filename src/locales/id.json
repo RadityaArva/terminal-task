@@ -1,0 +1,100 @@
+{
+  "app": {
+    "title": "TermFlow",
+    "subtitle": "Project & Task Management UI Berbasis Terminal",
+    "session": "Sesi Terminal",
+    "cmdShortcut": "Tekan Ctrl+K atau : untuk perintah"
+  },
+  "nav": {
+    "board": "Board (Kanban)",
+    "list": "Daftar (List)",
+    "grid": "Tabel (Grid)",
+    "timeline": "Timeline",
+    "zen": "Mode Zen",
+    "profile": "Profil"
+  },
+  "status": {
+    "todo": "Akan Dikerjakan",
+    "in_progress": "Sedang Dikerjakan",
+    "review": "Peninjauan",
+    "done": "Selesai"
+  },
+  "priority": {
+    "low": "Rendah",
+    "medium": "Sedang",
+    "high": "Tinggi",
+    "urgent": "Mendesak"
+  },
+  "task": {
+    "newTask": "Tambah Task Baru",
+    "titlePlaceholder": "Judul task...",
+    "descPlaceholder": "Deskripsi atau catatan detail...",
+    "subtasks": "Sub-task / Checklist",
+    "addSubtask": "Tambah checklist",
+    "assignee": "Penanggung Jawab",
+    "priority": "Prioritas",
+    "dueDate": "Jatuh Tempo",
+    "labels": "Label / Tag",
+    "comments": "Komentar & Aktivitas",
+    "addComment": "Tulis komentar...",
+    "githubPr": "Link GitHub Commit / PR",
+    "save": "Simpan Task",
+    "delete": "Hapus Task",
+    "close": "Tutup",
+    "filterPlaceholder": "Filter task (contoh: status:todo prioritas:high)..."
+  },
+  "command": {
+    "placeholder": "Ketik perintah atau cari... (contoh: > new task 'Judul' #tag @user)",
+    "title": "Command Palette Terminal",
+    "history": "Riwayat Perintah",
+    "suggestions": "Saran Perintah",
+    "execute": "Jalankan",
+    "noResults": "Perintah tidak ditemukan"
+  },
+  "theme": {
+    "title": "Tema Terminal",
+    "githubDark": "GitHub Dark",
+    "githubLight": "GitHub Light",
+    "dracula": "Dracula",
+    "nord": "Nord",
+    "solarized": "Solarized Dark",
+    "monokai": "Monokai",
+    "dimmed": "Dimmed Dark",
+    "highContrast": "Kontras Tinggi"
+  },
+  "profile": {
+    "title": "Profil Pengguna",
+    "completedTasks": "Task Selesai",
+    "dailyStreak": "Streak Harian",
+    "totalTasks": "Total Task",
+    "achievements": "Lencana & Pencapaian",
+    "contributionHeatmap": "Grafik Aktivitas (365 Hari terakhir)",
+    "activityLog": "Riwayat Log Aktivitas"
+  },
+  "zen": {
+    "focusMode": "Mode Zen & Pomodoro",
+    "start": "Mulai Timer",
+    "pause": "Jeda",
+    "reset": "Reset Timer",
+    "workSession": "Sesi Fokus",
+    "breakSession": "Istirahat",
+    "selectTask": "Pilih Task untuk Difokuskan"
+  },
+  "cheatsheet": {
+    "title": "Keyboard Shortcuts Cheatsheet",
+    "cmdPalette": "Buka Command Palette",
+    "navDownUp": "Pindah seleksi task ke bawah/atas",
+    "newTask": "Buat task baru",
+    "openDetail": "Buka detail task terpilih",
+    "gotoProfile": "Pergi ke Halaman Profil",
+    "gotoDashboard": "Kembali ke Dashboard",
+    "cheatsheetKey": "Tampilkan petunjuk keyboard ini"
+  },
+  "export": {
+    "title": "Export Data",
+    "json": "Export ke JSON",
+    "markdown": "Export ke Markdown",
+    "csv": "Export ke CSV"
+  }
+}
+
