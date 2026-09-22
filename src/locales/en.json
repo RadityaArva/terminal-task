@@ -7,11 +7,15 @@
   },
   "nav": {
     "board": "Board (Kanban)",
-    "list": "List View",
     "grid": "Grid Table",
     "timeline": "Timeline",
+    "graph": "Dependency Graph",
     "zen": "Zen Mode",
-    "profile": "Profile"
+    "profile": "Profile",
+    "inbox": "Inbox",
+    "mission": "Mission",
+    "analytics": "Analytics",
+    "notes": "Notes"
   },
   "status": {
     "todo": "To Do",
@@ -97,4 +101,3 @@
     "csv": "Export to CSV"
   }
 }
-

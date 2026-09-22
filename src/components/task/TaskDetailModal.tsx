@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useTermFlowStore, TaskStatus, TaskPriority, Task } from '@/lib/store';
+import { motion, useReducedMotion } from 'framer-motion';
+import { useTermFlowStore, TaskStatus, TaskPriority, Task, EnergyLevel } from '@/lib/store';
 import { getTranslation } from '@/lib/i18n';
 
 interface TaskDetailModalProps {
@@ -25,6 +26,12 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
     toggleSubtask,
     addSubtask,
     addComment,
+    startFocus,
+    stopFocus,
+    isPomodoroRunning,
+    focusTaskId,
+    pomodoroMinutes,
+    pomodoroSeconds,
     lang
   } = useTermFlowStore();
 
@@ -32,8 +39,10 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
   const [description, setDescription] = useState(task.description);
   const [status, setStatus] = useState<TaskStatus>(task.status);
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
+  const [energyLevel, setEnergyLevel] = useState<EnergyLevel>(task.energyLevel || 'medium');
   const [assignee, setAssignee] = useState(task.assignee);
-  const [dueDate, setDueDate] = useState(task.dueDate);
+  const [startDate, setStartDate] = useState(task.startDate || task.createdAt.slice(0, 10));
+  const [endDate, setEndDate] = useState(task.endDate || task.dueDate);
   const [dueTime, setDueTime] = useState(task.dueTime || '');
   const [labelsStr, setLabelsStr] = useState(task.labels.join(', '));
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
@@ -50,8 +59,11 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
       description,
       status,
       priority,
+      energyLevel,
       assignee,
-      dueDate,
+      startDate,
+      endDate,
+      dueDate: endDate,
       dueTime,
       labels
     });
@@ -81,10 +93,22 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
     }
   };
 
+  const isThisTaskFocusing = isPomodoroRunning && focusTaskId === task.id;
+  const shouldReduceMotion = useReducedMotion();
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 font-mono animate-in fade-in duration-150">
-      <div 
-        className="w-full max-w-2xl bg-[var(--bg-surface)] border-2 border-[var(--border-main)] rounded-lg shadow-2xl overflow-hidden text-[var(--text-main)] max-h-[90vh] flex flex-col"
+    <motion.div
+      initial={shouldReduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/70 p-0 font-mono backdrop-blur-xs sm:items-center sm:p-4"
+    >
+      <motion.div
+        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.22, ease: [0.22, 0.8, 0.24, 1] }}
+        className="terminal-modal flex h-full w-full max-w-2xl flex-col overflow-hidden border-0 border-[var(--border-main)] bg-[var(--bg-surface)] text-[var(--text-main)] shadow-2xl sm:h-auto sm:max-h-[90vh] sm:rounded-lg sm:border-2"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
@@ -162,15 +186,19 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
                 className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded p-1.5 text-[var(--accent-purple)] font-bold focus:outline-none"
               />
             </div>
+            <div>
+              <label className="block text-[var(--text-muted)] mb-1 text-[11px]">ENERGY</label>
+              <select value={energyLevel} onChange={(e) => setEnergyLevel(e.target.value as EnergyLevel)} className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded p-1.5 text-[var(--accent-purple)] font-bold focus:outline-none">
+                <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
+              </select>
+            </div>
 
             <div>
-              <label className="block text-[var(--text-muted)] mb-1 text-[11px]">DUE DATE</label>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded p-1.5 text-[var(--text-main)] focus:outline-none"
-              />
+              <label className="block text-[var(--text-muted)] mb-1 text-[11px]">DATE RANGE</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input aria-label="Tanggal mulai" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded p-1.5 text-[var(--text-main)] focus:outline-none" />
+                <input aria-label="Tanggal selesai" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded p-1.5 text-[var(--text-main)] focus:outline-none" />
+              </div>
             </div>
             <div>
               <label className="block text-[var(--text-muted)] mb-1 text-[11px]">DUE TIME</label>
@@ -209,6 +237,7 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
                     {st.title}
                   </span>
                 </div>
+
               ))}
             </div>
 
@@ -224,6 +253,16 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
                 Tambah
               </button>
             </form>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-[var(--accent-cyan)]/40 bg-[var(--accent-cyan)]/5 p-3">
+            <div>
+              <div className="font-bold text-[var(--accent-cyan)]">DEEP WORK / FOCUS</div>
+              <div className="mt-1 text-[10px] text-[var(--text-muted)]">{isThisTaskFocusing ? `Sesi aktif · ${String(pomodoroMinutes).padStart(2, '0')}:${String(pomodoroSeconds).padStart(2, '0')}` : 'Mulai sesi 25 atau 50 menit untuk task ini.'}</div>
+            </div>
+            <div className="flex gap-2">
+              {isThisTaskFocusing ? <button type="button" onClick={stopFocus} className="terminal-button border-[var(--accent-red)]/60 text-[var(--accent-red)]">■ Stop focus</button> : <><button type="button" onClick={() => startFocus(task.id, 25)} className="terminal-button terminal-button-primary">▶ 25m</button><button type="button" onClick={() => startFocus(task.id, 50)} className="terminal-button">▶ 50m</button></>}
+            </div>
           </div>
 
           {/* Comments Section */}
@@ -287,7 +326,7 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

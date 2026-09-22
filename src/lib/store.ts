@@ -5,7 +5,8 @@ import { Language } from './i18n';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
-export type ViewMode = 'board' | 'list' | 'grid' | 'timeline' | 'zen' | 'profile';
+export type EnergyLevel = 'low' | 'medium' | 'high';
+export type ViewMode = 'board' | 'grid' | 'timeline' | 'graph' | 'analytics' | 'zen' | 'profile' | 'inbox' | 'mission' | 'notes';
 
 export interface Subtask {
   id: string;
@@ -27,10 +28,15 @@ export interface Task {
   description: string;
   status: TaskStatus;
   priority: TaskPriority;
+  energyLevel?: EnergyLevel;
+  history?: Array<{ id: string; timestamp: string; user: string; field: string; before: string; after: string }>;
   assignee: string;
+  startDate?: string;
+  endDate?: string;
   dueDate: string;
   dueTime?: string;
   labels: string[];
+  dependencyIds?: string[];
   subtasks: Subtask[];
   comments: CommentItem[];
   githubPr?: {
@@ -48,6 +54,8 @@ export interface Project {
   name: string;
   key: string;
   description: string;
+  organizationName?: string;
+  members?: Array<{ username: string; role: 'Owner' | 'Admin' | 'Member' | 'Viewer' }>;
 }
 
 export interface ProjectNote {
@@ -57,6 +65,17 @@ export interface ProjectNote {
   updatedAt: string;
 }
 
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  folder?: string;
+  createdAt: string;
+  updatedAt: string;
+  lastOpenedAt?: string;
+}
+
 export interface ActivityLogItem {
   id: string;
   timestamp: string;
@@ -64,6 +83,15 @@ export interface ActivityLogItem {
   message: string;
   user: string;
   taskId?: string;
+}
+
+export interface FocusSession {
+  id: string;
+  taskId: string;
+  startedAt: string;
+  endedAt: string;
+  durationMinutes: number;
+  completed: boolean;
 }
 
 export interface UserProfile {
@@ -101,10 +129,12 @@ interface TermFlowState {
   lang: Language;
   searchFilter: string;
   projectNotes: Record<string, ProjectNote[]>;
+  notes: Note[];
   
   // CLI & History
   commandHistory: string[];
   activityLogs: ActivityLogItem[];
+  focusSessions: FocusSession[];
   
   // User Profile
   profile: UserProfile;
@@ -118,28 +148,40 @@ interface TermFlowState {
   pomodoroSeconds: number;
   isPomodoroRunning: boolean;
   pomodoroMode: 'work' | 'break';
+  focusTaskId: string | null;
+  focusDurationSeconds: number;
+  focusStartedAt: string | null;
 
   // Actions
   setThemeId: (themeId: ThemeId) => void;
   setLang: (lang: Language) => void;
   setViewMode: (viewMode: ViewMode) => void;
   setActiveProjectId: (projectId: string) => void;
+  addProject: (project: Omit<Project, 'id' | 'key'>) => string;
   setSelectedTaskId: (taskId: string | null) => void;
   setSearchFilter: (filter: string) => void;
   saveProjectNote: (projectId: string, note: Omit<ProjectNote, 'id' | 'updatedAt'> & { id?: string }) => void;
   deleteProjectNote: (projectId: string, noteId: string) => void;
+  addNote: (note: Pick<Note, 'title'> & Partial<Pick<Note, 'content' | 'tags' | 'folder'>>) => string;
+  updateNote: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'tags' | 'folder'>>) => void;
+  deleteNote: (id: string) => void;
+  openNote: (id: string) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   setPassword: (password: string) => void;
   login: (password: string) => boolean;
   logout: () => void;
   setNotificationSettings: (settings: Partial<NotificationSettings>) => void;
   addCommandHistory: (cmd: string) => void;
+  startFocus: (taskId: string, durationMinutes?: number) => void;
+  stopFocus: () => void;
   
   // Task Actions
   addTask: (taskData: Partial<Task>) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   moveTaskStatus: (id: string, status: TaskStatus) => void;
+  bulkUpdateTasks: (ids: string[], updates: Partial<Task>) => void;
+  bulkDeleteTasks: (ids: string[]) => void;
   purgeExpiredTasks: () => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   addSubtask: (taskId: string, title: string) => void;
@@ -153,6 +195,7 @@ interface TermFlowState {
 }
 
 const initialProjects: Project[] = [
+  { id: 'inbox', name: 'Inbox', key: 'IN', description: 'Quick capture tasks awaiting triage' },
   { id: 'proj-1', name: 'TermFlow Web App', key: 'TF', description: 'Terminal-first task manager frontend' },
   { id: 'proj-2', name: 'Backend API Service', key: 'API', description: 'RESTful API and WebSocket engine' },
   { id: 'proj-3', name: 'CLI Tool Integration', key: 'CLI', description: 'Native binary helper and shell bindings' },
@@ -288,9 +331,11 @@ export const useTermFlowStore = create<TermFlowState>()(
       lang: 'id',
       searchFilter: '',
       projectNotes: {},
+      notes: [],
       
       commandHistory: ['theme dracula', 'view board', 'new task "Design UI" #ui'],
       activityLogs: initialLogs,
+      focusSessions: [],
       profile: initialProfile,
       password: 'termflow123',
       isAuthenticated: false,
@@ -301,6 +346,9 @@ export const useTermFlowStore = create<TermFlowState>()(
       pomodoroSeconds: 0,
       isPomodoroRunning: false,
       pomodoroMode: 'work',
+      focusTaskId: null,
+      focusDurationSeconds: 0,
+      focusStartedAt: null,
 
       setThemeId: (themeId) => {
         applyTheme(themeId);
@@ -310,6 +358,21 @@ export const useTermFlowStore = create<TermFlowState>()(
       setLang: (lang) => set({ lang }),
       setViewMode: (viewMode) => set({ viewMode }),
       setActiveProjectId: (projectId) => set({ activeProjectId: projectId }),
+      addProject: (projectData) => {
+        const state = get();
+        const id = `proj-${Date.now()}`;
+        const keyBase = projectData.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() || 'NEW';
+        const usedKeys = new Set(state.projects.map((project) => project.key));
+        let key = keyBase;
+        let suffix = 2;
+        while (usedKeys.has(key)) key = `${keyBase.slice(0, 3 - String(suffix).length)}${suffix++}`;
+        set({
+          projects: [...state.projects, { ...projectData, id, key }],
+          activeProjectId: id,
+          viewMode: 'board'
+        });
+        return id;
+      },
       setSelectedTaskId: (selectedTaskId) => set({ selectedTaskId }),
       setSearchFilter: (searchFilter) => set({ searchFilter }),
       saveProjectNote: (projectId, note) => set((state) => {
@@ -335,6 +398,19 @@ export const useTermFlowStore = create<TermFlowState>()(
           [projectId]: (state.projectNotes[projectId] || []).filter((note) => note.id !== noteId)
         }
       })),
+      addNote: (note) => {
+        const id = `note-${Date.now()}`;
+        const now = new Date().toISOString();
+        set((state) => ({
+          notes: [{ id, title: note.title.trim() || 'Untitled note', content: note.content || '', tags: note.tags || [], folder: note.folder?.trim() || undefined, createdAt: now, updatedAt: now, lastOpenedAt: now }, ...state.notes]
+        }));
+        return id;
+      },
+      updateNote: (id, updates) => set((state) => ({
+        notes: state.notes.map((note) => note.id === id ? { ...note, ...updates, title: updates.title?.trim() || note.title, updatedAt: new Date().toISOString() } : note)
+      })),
+      deleteNote: (id) => set((state) => ({ notes: state.notes.filter((note) => note.id !== id) })),
+      openNote: (id) => set((state) => ({ notes: state.notes.map((note) => note.id === id ? { ...note, lastOpenedAt: new Date().toISOString() } : note) })),
       updateProfile: (updates) => set((state) => ({ profile: { ...state.profile, ...updates } })),
       setPassword: (password) => set({ password }),
       login: (password) => {
@@ -355,15 +431,19 @@ export const useTermFlowStore = create<TermFlowState>()(
 
       addTask: (taskData) => {
         const state = get();
-        const id = `${state.projects.find(p => p.id === state.activeProjectId)?.key || 'TF'}-${state.tasks.length + 1}`;
+        const targetProjectId = taskData.projectId || state.activeProjectId;
+        const id = `${state.projects.find(p => p.id === targetProjectId)?.key || 'TF'}-${state.tasks.length + 1}`;
         const newTask: Task = {
           id,
-          projectId: state.activeProjectId,
+          projectId: targetProjectId,
           title: taskData.title || 'New Task',
           description: taskData.description || '',
           status: taskData.status || 'todo',
           priority: taskData.priority || 'medium',
+          energyLevel: taskData.energyLevel || 'medium',
           assignee: taskData.assignee || 'radit',
+          startDate: taskData.startDate || new Date().toISOString().slice(0, 10),
+          endDate: taskData.endDate || taskData.dueDate || new Date().toISOString().slice(0, 10),
           dueDate: taskData.dueDate || new Date().toISOString().slice(0, 10),
           labels: taskData.labels || [],
           subtasks: taskData.subtasks || [],
@@ -392,14 +472,47 @@ export const useTermFlowStore = create<TermFlowState>()(
           tasks: state.tasks.map((task) => {
             if (task.id !== id) return task;
             const status = updates.status ?? task.status;
+            const history = Object.entries(updates).map(([field, value]) => ({
+              id: `history-${Date.now()}-${field}`,
+              timestamp: new Date().toISOString(),
+              user: state.profile.username,
+              field,
+              before: String(task[field as keyof Task] ?? ''),
+              after: String(value ?? '')
+            }));
             return {
               ...task,
               ...updates,
+              history: [...(task.history || []), ...history],
               completedAt: status === 'done'
                 ? task.status === 'done' ? task.completedAt : new Date().toISOString()
                 : undefined
             };
           })
+        }));
+      },
+
+      bulkUpdateTasks: (ids, updates) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => ids.includes(task.id) ? {
+            ...task,
+            ...updates,
+            history: [...(task.history || []), ...Object.entries(updates).map(([field, value]) => ({
+              id: `history-${Date.now()}-${task.id}-${field}`,
+              timestamp: new Date().toISOString(),
+              user: state.profile.username,
+              field,
+              before: String(task[field as keyof Task] ?? ''),
+              after: String(value ?? '')
+            }))]
+          } : task)
+        }));
+      },
+
+      bulkDeleteTasks: (ids) => {
+        set((state) => ({
+          tasks: state.tasks.filter((task) => !ids.includes(task.id)),
+          selectedTaskId: state.selectedTaskId && ids.includes(state.selectedTaskId) ? null : state.selectedTaskId
         }));
       },
 
@@ -527,6 +640,57 @@ export const useTermFlowStore = create<TermFlowState>()(
 
       setZenTask: (zenTaskId) => set({ zenTaskId }),
 
+      startFocus: (taskId, durationMinutes = 25) => {
+        const state = get();
+        if (!state.tasks.some((task) => task.id === taskId)) return;
+        const minutes = durationMinutes === 50 ? 50 : 25;
+        set({
+          zenTaskId: taskId,
+          pomodoroMinutes: minutes,
+          pomodoroSeconds: 0,
+          pomodoroMode: 'work',
+          isPomodoroRunning: true,
+          focusTaskId: taskId,
+          focusDurationSeconds: minutes * 60,
+          focusStartedAt: new Date().toISOString()
+        });
+      },
+
+      stopFocus: () => {
+        const state = get();
+        if (!state.focusTaskId || !state.focusStartedAt) return;
+        const elapsedSeconds = Math.max(0, state.focusDurationSeconds - (state.pomodoroMinutes * 60 + state.pomodoroSeconds));
+        const taskId = state.focusTaskId;
+        if (elapsedSeconds < 1) {
+          set({ isPomodoroRunning: false, focusTaskId: null, focusStartedAt: null });
+          return;
+        }
+        const session: FocusSession = {
+          id: `focus-${Date.now()}`,
+          taskId,
+          startedAt: state.focusStartedAt,
+          endedAt: new Date().toISOString(),
+          durationMinutes: Math.max(1, Math.round(elapsedSeconds / 60)),
+          completed: state.pomodoroMinutes === 0 && state.pomodoroSeconds === 0
+        };
+        const task = state.tasks.find((item) => item.id === taskId);
+        const log: ActivityLogItem = {
+          id: `log-${Date.now()}`,
+          timestamp: new Date().toLocaleTimeString(),
+          commitHash: Math.random().toString(36).substring(2, 9),
+          message: `focus session ${session.durationMinutes}m on ${task?.id || taskId}`,
+          user: state.profile.username,
+          taskId
+        };
+        set({
+          isPomodoroRunning: false,
+          focusTaskId: null,
+          focusStartedAt: null,
+          focusSessions: [session, ...state.focusSessions],
+          activityLogs: [log, ...state.activityLogs]
+        });
+      },
+
       togglePomodoro: () => set((state) => ({ isPomodoroRunning: !state.isPomodoroRunning })),
 
       resetPomodoro: () => set((state) => ({
@@ -552,6 +716,7 @@ export const useTermFlowStore = create<TermFlowState>()(
             pomodoroSeconds: 0,
             isPomodoroRunning: false
           });
+          if (state.pomodoroMode === 'work') get().stopFocus();
         }
       }
     }),
@@ -567,9 +732,11 @@ export const useTermFlowStore = create<TermFlowState>()(
         commandHistory: state.commandHistory,
         profile: state.profile,
         projectNotes: state.projectNotes,
+        notes: state.notes,
         password: state.password,
         isAuthenticated: state.isAuthenticated,
-        notificationSettings: state.notificationSettings
+        notificationSettings: state.notificationSettings,
+        focusSessions: state.focusSessions
       })
     }
   )

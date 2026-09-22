@@ -109,14 +109,14 @@ export function parseCommand(input: string): ParsedCommand | null {
     }
   }
 
-  // Pattern: view board | list | grid | timeline | zen | profile
+  // Pattern: view board | grid | timeline | graph | zen | profile
   // or goto profile | dashboard
   if (trimmed.startsWith('view') || trimmed.startsWith('goto')) {
     const viewStr = trimmed.replace(/^(view|goto)\s*/, '').toLowerCase();
     if (viewStr === 'board' || viewStr === 'kanban') return { type: 'view_change', view: 'board' };
-    if (viewStr === 'list') return { type: 'view_change', view: 'list' };
     if (viewStr === 'grid' || viewStr === 'table') return { type: 'view_change', view: 'grid' };
     if (viewStr === 'timeline' || viewStr === 'gantt') return { type: 'view_change', view: 'timeline' };
+    if (viewStr === 'graph' || viewStr === 'dependencies' || viewStr === 'dependency') return { type: 'view_change', view: 'graph' };
     if (viewStr === 'zen' || viewStr === 'focus') return { type: 'view_change', view: 'zen' };
     if (viewStr === 'profile' || viewStr === 'me') return { type: 'view_change', view: 'profile' };
     if (viewStr === 'dashboard' || viewStr === 'home') return { type: 'view_change', view: 'board' };

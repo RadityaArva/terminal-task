@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useTermFlowStore } from '@/lib/store';
 
 export default function ZenView() {
@@ -13,29 +12,14 @@ export default function ZenView() {
     pomodoroSeconds,
     isPomodoroRunning,
     pomodoroMode,
-    togglePomodoro,
+    startFocus,
+    stopFocus,
     resetPomodoro,
-    tickPomodoro,
     toggleSubtask
   } = useTermFlowStore();
 
   const projectTasks = tasks.filter((t) => t.projectId === activeProjectId);
   const activeTask = tasks.find((t) => t.id === zenTaskId) || projectTasks[0];
-
-  // Pomodoro timer tick interval
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (isPomodoroRunning) {
-      interval = setInterval(() => {
-        tickPomodoro();
-      }, 1000);
-    } else if (interval) {
-      clearInterval(interval);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isPomodoroRunning, tickPomodoro]);
 
   const formattedMin = String(pomodoroMinutes).padStart(2, '0');
   const formattedSec = String(pomodoroSeconds).padStart(2, '0');
@@ -80,7 +64,10 @@ export default function ZenView() {
         {/* Timer Control Buttons */}
         <div className="flex justify-center space-x-3 pt-2">
           <button
-            onClick={togglePomodoro}
+            onClick={() => {
+              if (isPomodoroRunning) stopFocus();
+              else if (activeTask) startFocus(activeTask.id, 25);
+            }}
             className={`px-6 py-2.5 rounded font-bold text-sm text-[var(--bg-app)] transition-all shadow-md ${
               isPomodoroRunning
                 ? 'bg-[var(--accent-yellow)] hover:opacity-90'
@@ -90,7 +77,10 @@ export default function ZenView() {
             {isPomodoroRunning ? '⏸ Jeda / Pause' : '▶ Mulai Focus'}
           </button>
           <button
-            onClick={resetPomodoro}
+            onClick={() => {
+              if (isPomodoroRunning) stopFocus();
+              resetPomodoro();
+            }}
             className="px-4 py-2.5 rounded bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-bright)] border border-[var(--border-main)] font-bold text-sm transition-colors"
           >
             🔄 Reset
@@ -141,4 +131,3 @@ export default function ZenView() {
     </div>
   );
 }
-

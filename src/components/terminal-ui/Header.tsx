@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTermFlowStore, ViewMode } from '@/lib/store';
 import { THEMES, ThemeId } from '@/lib/themes';
 import { getTranslation } from '@/lib/i18n';
@@ -16,7 +18,6 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
   const {
     projects,
     activeProjectId,
-    setActiveProjectId,
     viewMode,
     setViewMode,
     themeId,
@@ -25,165 +26,344 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
     setLang,
     tasks
   } = useTermFlowStore();
+  const inboxCount = tasks.filter((task) => task.projectId === 'inbox').length;
 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState('');
+  const headerRef = useRef<HTMLElement>(null);
+
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profile = useTermFlowStore((state) => state.profile);
+  const logout = useTermFlowStore((state) => state.logout);
+
+  // auto-close dropdowns when clicking outside navbar
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+        setShowMoreMenu(false);
+        setShowSettingsMenu(false);
+        setShowProfileMenu(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+        setShowMoreMenu(false);
+        setShowSettingsMenu(false);
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
+  // close any open menu immediately when navigating to another view
+  useEffect(() => {
+    setIsMenuOpen(false);
+    setShowMoreMenu(false);
+    setShowSettingsMenu(false);
+    setShowProfileMenu(false);
+  }, [viewMode]);
+
+  useEffect(() => {
+    const updateClock = () => {
+      setCurrentTime(new Intl.DateTimeFormat('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(new Date()));
+    };
+    updateClock();
+    const interval = window.setInterval(updateClock, 1000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
 
   const views: { id: ViewMode; labelKey: string; icon: string }[] = [
-    { id: 'board', labelKey: 'nav.board', icon: '📋' },
-    { id: 'list', labelKey: 'nav.list', icon: '📄' },
-    { id: 'grid', labelKey: 'nav.grid', icon: '📊' },
-    { id: 'timeline', labelKey: 'nav.timeline', icon: '⏳' },
-    { id: 'zen', labelKey: 'nav.zen', icon: '🧘' },
-    { id: 'profile', labelKey: 'nav.profile', icon: '👤' },
+    { id: 'board', labelKey: 'nav.board', icon: '▦' },
+    { id: 'grid', labelKey: 'nav.grid', icon: '▭' },
+    { id: 'timeline', labelKey: 'nav.timeline', icon: '◷' },
+    { id: 'graph', labelKey: 'nav.graph', icon: '⬡' },
+    { id: 'zen', labelKey: 'nav.zen', icon: '◎' },
+    { id: 'profile', labelKey: 'nav.profile', icon: '◐' },
+    { id: 'inbox', labelKey: 'nav.inbox', icon: '✉' },
+    { id: 'mission', labelKey: 'nav.mission', icon: '⬢' },
+    { id: 'analytics', labelKey: 'nav.analytics', icon: '▅' },
+    { id: 'notes', labelKey: 'nav.notes', icon: '✎' },
   ];
+  const primaryViews = views.slice(0, 4);
+  const secondaryViews = views.slice(4);
 
   return (
-    <header className="border-b border-[var(--border-main)] bg-[var(--bg-surface)] text-[var(--text-main)] transition-colors duration-200">
-      {/* Top Window Bar */}
-      <div className="flex items-center justify-between px-4 py-2 text-xs border-b border-[var(--border-main)]/50 font-mono">
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1.5 mr-2">
-            <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block"></span>
-            <span className="w-3 h-3 rounded-full bg-yellow-500/80 inline-block"></span>
-            <span className="w-3 h-3 rounded-full bg-green-500/80 inline-block"></span>
-          </div>
-          <span className="font-bold text-[var(--accent-cyan)] flex items-center gap-1">
-            <span>&gt;_ Command Palette Terminal</span>
-            <span className="animate-pulse bg-[var(--accent-cyan)] text-[var(--bg-app)] px-1 rounded-xs font-bold">$</span>
-          </span>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <button onClick={() => setShowNotes(true)} className="px-2 py-1 rounded bg-[var(--bg-muted)] hover:bg-[var(--border-main)] text-[var(--accent-yellow)] transition-colors" title="Open saved project notes">📝 Notes</button>
-          {/* Export Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className="px-2 py-1 rounded bg-[var(--bg-muted)] hover:bg-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors flex items-center gap-1"
-              title="Export tasks data"
-            >
-              <span>💾</span>
-              <span>Export</span>
-            </button>
-
-            {showExportMenu && (
-              <div className="absolute right-0 mt-1 w-44 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded shadow-lg z-50 py-1 font-mono text-xs">
-                <button
-                  onClick={() => { exportTasksToJSON(tasks); setShowExportMenu(false); }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-muted)] text-[var(--text-main)]"
-                >
-                  📄 JSON Format
-                </button>
-                <button
-                  onClick={() => { exportTasksToMarkdown(tasks, activeProject.name); setShowExportMenu(false); }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-muted)] text-[var(--text-main)]"
-                >
-                  📝 Markdown (.md)
-                </button>
-                <button
-                  onClick={() => { exportTasksToCSV(tasks); setShowExportMenu(false); }}
-                  className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-muted)] text-[var(--text-main)]"
-                >
-                  📊 Spreadsheet (.csv)
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Theme Selector */}
-          <select
-            value={themeId}
-            onChange={(e) => setThemeId(e.target.value as ThemeId)}
-            className="bg-[var(--bg-muted)] text-[var(--text-main)] border border-[var(--border-main)] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[var(--accent-cyan)]"
-          >
-            {Object.values(THEMES).map((t) => (
-              <option key={t.id} value={t.id}>
-                🎨 {t.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Language Toggle */}
+    <header ref={headerRef} className="sticky top-0 z-40 border-b border-[var(--border-main)]/60 bg-[var(--bg-surface)]/95 backdrop-blur-md supports-[backdrop-filter]:bg-[var(--bg-surface)]/80">
+      {/* top bar */}
+      <div className="flex h-[3.25rem] items-center gap-2 px-3 sm:h-14 sm:gap-3 sm:px-4 lg:px-5">
+        {/* left: brand + workspace */}
+        <div className="flex min-w-0 shrink-0 items-center gap-2.5 sm:gap-3">
           <button
-            onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
-            className="px-2 py-1 rounded bg-[var(--bg-muted)] hover:bg-[var(--border-main)] text-[var(--text-main)] font-semibold transition-colors"
+            onClick={() => setViewMode('board')}
+            className="group flex items-center gap-2 rounded-md px-1 py-1 -ml-1 transition hover:bg-[var(--bg-muted)]"
+            title="Open dashboard"
           >
-            🌐 {lang.toUpperCase()}
+            <span className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--accent-main)]/30 bg-[var(--accent-main)]/10 text-[var(--accent-main)] text-sm font-bold leading-none">›_</span>
+            <span className="hidden text-sm font-bold tracking-tight text-[var(--text-bright)] sm:inline sm:text-[15px]">TermFlow</span>
+            <span className="hidden h-3 w-px bg-[var(--border-main)]/60 sm:block" />
           </button>
 
-          {/* Keyboard Cheatsheet Button */}
-          <button
-            onClick={onOpenCheatsheet}
-            className="px-2 py-1 rounded bg-[var(--bg-muted)] hover:bg-[var(--border-main)] text-[var(--accent-yellow)] font-bold transition-colors"
-            title="Keyboard Shortcuts (?)"
-          >
-            ?
-          </button>
-        </div>
-      </div>
-
-      {/* Main Navigation Bar */}
-      <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-4 font-mono">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <span className="text-xl font-bold tracking-wider text-[var(--accent-main)]">
-              TermFlow
-            </span>
-            <span className="text-xs bg-[var(--bg-muted)] border border-[var(--border-main)] px-2 py-0.5 rounded text-[var(--text-muted)]">
-              v0.4.0-cli
-            </span>
+          {/* workspace chip — hidden on very small, compact on mobile */}
+          <div className="hidden min-w-0 items-center gap-1.5 rounded-full border border-[var(--border-main)]/50 bg-[var(--bg-app)] px-2.5 py-1 sm:flex">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-main)] shadow-[0_0_6px_var(--accent-main)]" />
+            <span className="max-w-[9rem] truncate text-xs font-semibold tracking-wide text-[var(--text-muted)] lg:max-w-[11rem]">{activeProject.name}</span>
           </div>
 
-          {/* Project Switcher */}
-          <select
-            value={activeProjectId}
-            onChange={(e) => setActiveProjectId(e.target.value)}
-            className="bg-[var(--bg-app)] text-[var(--accent-cyan)] font-bold border border-[var(--border-main)] rounded px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[var(--accent-cyan)]"
-          >
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                📁 [{p.key}] {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* View Switcher Tabs */}
-        <div className="flex items-center space-x-1 bg-[var(--bg-app)] p-1 rounded-md border border-[var(--border-main)] text-xs">
-          {views.map((v) => {
-            const isActive = viewMode === v.id;
-            return (
+          {/* primary nav — desktop only */}
+          <nav className="hidden items-center gap-1 xl:flex" aria-label="Primary">
+            {primaryViews.map((v) => (
               <button
                 key={v.id}
                 onClick={() => setViewMode(v.id)}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded transition-all ${
-                  isActive
-                    ? 'bg-[var(--bg-muted)] text-[var(--accent-main)] font-bold border border-[var(--border-main)] shadow-sm'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-surface)]'
-                }`}
+                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium transition ${viewMode === v.id ? 'bg-[var(--bg-app)] text-[var(--accent-main)] ring-1 ring-[var(--accent-main)]/20' : 'text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-main)]'}`}
+                title={getTranslation(v.labelKey, lang)}
+                aria-current={viewMode === v.id ? 'page' : undefined}
               >
-                <span>{v.icon}</span>
-                <span>{getTranslation(v.labelKey, lang)}</span>
+                <span className="text-[13px] leading-none opacity-90">{v.icon}</span>
+                <span className="hidden 2xl:inline">{getTranslation(v.labelKey, lang).replace(' (Kanban)', '').replace(' Table', '')}</span>
               </button>
-            );
-          })}
+            ))}
+          </nav>
         </div>
 
-        {/* Command Palette Trigger */}
-        <button
-          onClick={onOpenCommandPalette}
-          className="flex items-center space-x-2 bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-[var(--accent-cyan)] text-[var(--text-muted)] hover:text-[var(--text-main)] px-3 py-1.5 rounded text-xs transition-colors"
-        >
-          <span className="text-[var(--accent-cyan)] font-bold">&gt;_</span>
-          <span>{getTranslation('command.title', lang)}</span>
-          <kbd className="bg-[var(--bg-muted)] border border-[var(--border-main)] px-1.5 py-0.5 rounded text-[10px] text-[var(--accent-yellow)]">
-            Ctrl+K
-          </kbd>
-        </button>
+        {/* center: command palette */}
+        <div className="flex min-w-0 flex-1 justify-center px-1 sm:px-3">
+          <button
+            onClick={onOpenCommandPalette}
+            className="group flex w-full max-w-[22rem] items-center gap-2 rounded-lg border border-[var(--border-main)]/70 bg-[var(--bg-app)] px-2.5 py-2 text-left transition hover:border-[var(--accent-cyan)]/60 hover:bg-[var(--bg-app)] sm:max-w-md sm:px-3 sm:py-2"
+            aria-label="Open command palette"
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)] text-xs font-bold">⌘</span>
+            <span className="min-w-0 flex-1 truncate text-xs font-medium tracking-wide text-[var(--text-muted)] group-hover:text-[var(--text-main)] sm:text-[13px]">
+              <span className="hidden sm:inline">{getTranslation('command.title', lang)}</span>
+              <span className="sm:hidden">Command</span>
+            </span>
+            <kbd className="hidden shrink-0 rounded border border-[var(--border-main)] bg-[var(--bg-muted)] px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-wide text-[var(--text-muted)] sm:inline-flex">Ctrl K</kbd>
+            <span className="shrink-0 text-[10px] text-[var(--text-muted)] sm:hidden">›</span>
+          </button>
+        </div>
+
+        {/* right: actions */}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+          <time className="hidden min-w-[4.5rem] text-right font-mono text-[11px] tabular-nums tracking-wide text-[var(--text-muted)] xl:block">{currentTime || '--:--:--'}</time>
+
+          <button
+            onClick={() => setViewMode('inbox')}
+            className="relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-[var(--text-muted)] transition hover:border-[var(--border-main)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-main)] sm:h-9 sm:w-9"
+            title={`Inbox: ${inboxCount} task`}
+            aria-label="Inbox"
+          >
+            <span className="text-sm leading-none">✉</span>
+            {inboxCount > 0 && <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--accent-red)] px-1 text-[10px] font-bold leading-none text-white">{inboxCount > 9 ? '9+' : inboxCount}</span>}
+          </button>
+
+          <span className="hidden h-5 w-px bg-[var(--border-main)]/50 sm:block" />
+
+          {/* more */}
+          <div className="relative hidden sm:block">
+            <button
+              onClick={() => setShowMoreMenu((v) => !v)}
+              aria-expanded={showMoreMenu}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm transition sm:h-9 sm:w-9 ${showMoreMenu ? 'border-[var(--accent-cyan)]/40 bg-[var(--bg-muted)] text-[var(--text-bright)]' : 'border-transparent text-[var(--text-muted)] hover:border-[var(--border-main)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-main)]'}`}
+              title="More"
+            >⋯</button>
+            <AnimatePresence>
+              {showMoreMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                  transition={{ duration: 0.16, ease: [0.22, 0.8, 0.24, 1] }}
+                  className="absolute right-0 top-[calc(100%+8px)] z-50 w-56 overflow-hidden rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-1.5 shadow-2xl"
+                >
+                  <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Quick actions</div>
+                  <button onClick={() => { setShowNotes(true); setShowMoreMenu(false); }} className="menu-item flex items-center gap-2"><span className="text-[var(--accent-cyan)]">✎</span> Notes</button>
+                  <div className="relative">
+                    <button onClick={() => setShowExportMenu((v) => !v)} className="menu-item flex w-full items-center justify-between"> <span className="flex items-center gap-2"><span>⤓</span> Export</span><span className="text-[10px] text-[var(--text-muted)]">{showExportMenu ? '−' : '+'}</span></button>
+                    <AnimatePresence>
+                      {showExportMenu && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                          <div className="ml-2 mt-1 space-y-0.5 border-l border-[var(--border-main)]/50 pl-2">
+                            <button onClick={() => exportTasksToJSON(tasks)} className="menu-item text-xs">JSON</button>
+                            <button onClick={() => exportTasksToMarkdown(tasks, activeProject.name)} className="menu-item text-xs">Markdown</button>
+                            <button onClick={() => exportTasksToCSV(tasks)} className="menu-item text-xs">CSV</button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  <button onClick={() => { onOpenCheatsheet(); setShowMoreMenu(false); }} className="menu-item flex items-center gap-2"><span>⌨</span> Shortcuts</button>
+                  <div className="my-1.5 border-t border-[var(--border-main)]/60" />
+                  <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Views</div>
+                  {secondaryViews.map((v) => (
+                    <button key={v.id} onClick={() => setViewMode(v.id)} className={`menu-item flex items-center gap-2 ${viewMode === v.id ? 'bg-[var(--bg-muted)] text-[var(--accent-main)]' : ''}`}>
+                      <span className="w-4 text-center text-xs">{v.icon}</span> {getTranslation(v.labelKey, lang)}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* settings */}
+          <div className="relative hidden sm:block">
+            <button
+              onClick={() => setShowSettingsMenu((v) => !v)}
+              aria-expanded={showSettingsMenu}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-md border text-sm transition sm:h-9 sm:w-9 ${showSettingsMenu ? 'border-[var(--accent-cyan)]/40 bg-[var(--bg-muted)] text-[var(--text-bright)]' : 'border-transparent text-[var(--text-muted)] hover:border-[var(--border-main)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-main)]'}`}
+              title="Settings"
+            >⚙</button>
+            <AnimatePresence>
+              {showSettingsMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                  transition={{ duration: 0.16 }}
+                  className="absolute right-0 top-[calc(100%+8px)] z-50 w-60 overflow-hidden rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-3 shadow-2xl"
+                >
+                  <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Theme</label>
+                  <select value={themeId} onChange={(e) => setThemeId(e.target.value as ThemeId)} className="terminal-input py-2 text-xs font-medium">
+                    {Object.values(THEMES).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                  <button onClick={() => setLang(lang === 'id' ? 'en' : 'id')} className="menu-item mt-2 flex items-center gap-2"><span>◐</span> Language: <span className="font-bold text-[var(--accent-cyan)]">{lang.toUpperCase()}</span></button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* profile */}
+          <div className="relative">
+            <button
+              onClick={() => setShowProfileMenu((v) => !v)}
+              aria-expanded={showProfileMenu}
+              className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--bg-muted)] bg-[var(--bg-muted)] text-xs font-bold text-[var(--accent-cyan)] ring-1 ring-[var(--border-main)]/50 transition hover:border-[var(--accent-cyan)]/40 hover:ring-[var(--accent-cyan)]/20 sm:h-9 sm:w-9"
+              title="Profile"
+            >
+              {profile.avatarUrl ? (
+                <Image src={profile.avatarUrl} alt={profile.username || 'Avatar'} width={36} height={36} className="h-full w-full object-cover" unoptimized />
+              ) : (
+                profile.username.slice(0, 2).toUpperCase()
+              )}
+            </button>
+            <AnimatePresence>
+              {showProfileMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                  transition={{ duration: 0.16 }}
+                  className="absolute right-0 top-[calc(100%+10px)] z-50 w-48 overflow-hidden rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-1.5 shadow-2xl"
+                >
+                  <div className="px-3 py-2">
+                    <div className="truncate text-xs font-bold text-[var(--text-bright)]">{profile.username}</div>
+                    <div className="truncate text-[11px] text-[var(--text-muted)]">{profile.role || 'Member'}</div>
+                  </div>
+                  <div className="my-1 border-t border-[var(--border-main)]/60" />
+                  <button onClick={() => setViewMode('profile')} className="menu-item">◐ Profile</button>
+                  <button onClick={logout} className="menu-item text-[var(--accent-red)] hover:bg-[var(--accent-red)]/10">↪ Logout</button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* hamburger — mobile only */}
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((o) => !o)}
+            aria-expanded={isMenuOpen}
+            aria-label="Toggle navigation"
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border text-sm leading-none transition sm:h-9 sm:w-9 lg:hidden ${isMenuOpen ? 'border-[var(--accent-cyan)] bg-[var(--accent-cyan)] text-[var(--bg-app)]' : 'border-[var(--border-main)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:border-[var(--accent-cyan)]/40 hover:text-[var(--text-main)]'}`}
+          >
+            <span className="relative block h-3.5 w-3.5">
+              <span className={`absolute left-0 top-0 h-0.5 w-full rounded bg-current transition ${isMenuOpen ? 'translate-y-[5px] rotate-45' : ''}`} />
+              <span className={`absolute left-0 top-[5px] h-0.5 w-full rounded bg-current transition ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`} />
+              <span className={`absolute left-0 top-[10px] h-0.5 w-full rounded bg-current transition ${isMenuOpen ? '-translate-y-[5px] -rotate-45' : ''}`} />
+            </span>
+          </button>
+        </div>
       </div>
+
+      {/* mobile/workspace sub-bar — visible only on small */}
+      <div className="flex items-center gap-2 border-t border-[var(--border-main)]/40 bg-[var(--bg-app)]/60 px-3 py-2 sm:hidden">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-main)]" />
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--text-muted)]">{activeProject.name}</span>
+        <span className="shrink-0 rounded-full border border-[var(--border-main)]/60 bg-[var(--bg-surface)] px-2 py-0.5 font-mono text-[10px] font-bold tracking-wide text-[var(--accent-cyan)]">{viewMode}</span>
+      </div>
+
+      {/* mobile drawer */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2, ease: [0.22, 0.8, 0.24, 1] }}
+            className="overflow-hidden border-t border-[var(--border-main)] bg-[var(--bg-app)] lg:hidden"
+          >
+            <div className="space-y-3 p-3">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {views.map((v) => {
+                  const active = viewMode === v.id;
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => setViewMode(v.id)}
+                      className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition ${active ? 'border-[var(--accent-main)]/40 bg-[var(--accent-main)]/10 text-[var(--accent-main)]' : 'border-[var(--border-main)]/40 bg-[var(--bg-surface)] text-[var(--text-muted)] hover:border-[var(--accent-cyan)]/30 hover:text-[var(--text-main)]'}`}
+                    >
+                      <span className="text-base leading-none">{v.icon}</span>
+                      <span className="line-clamp-1 text-[10px] font-semibold leading-tight tracking-wide">{getTranslation(v.labelKey, lang).split(' ')[0]}</span>
+                      {v.id === 'inbox' && inboxCount > 0 && <span className="rounded-full bg-[var(--accent-red)] px-1.5 py-0.5 text-[9px] font-bold leading-none text-white">{inboxCount}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => { setShowNotes(true); setIsMenuOpen(false); }} className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)] px-3 py-2.5 text-left text-xs font-medium text-[var(--text-main)] hover:border-[var(--accent-cyan)]/40">
+                  <span className="block text-[11px] font-bold tracking-wide text-[var(--accent-cyan)]">✎ Notes</span>
+                  <span className="text-[11px] text-[var(--text-muted)]">Quick capture</span>
+                </button>
+                <button onClick={() => { onOpenCheatsheet(); setIsMenuOpen(false); }} className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)] px-3 py-2.5 text-left text-xs font-medium text-[var(--text-main)] hover:border-[var(--accent-cyan)]/40">
+                  <span className="block text-[11px] font-bold tracking-wide text-[var(--accent-yellow)]">⌨ Shortcuts</span>
+                  <span className="text-[11px] text-[var(--text-muted)]">Cheatsheet</span>
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-[var(--border-main)]/50 bg-[var(--bg-surface)] p-3">
+                <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Theme & Language</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <select value={themeId} onChange={(e) => setThemeId(e.target.value as ThemeId)} className="terminal-input py-2 text-xs">
+                    {Object.values(THEMES).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                  <button onClick={() => setLang(lang === 'id' ? 'en' : 'id')} className="rounded-lg border border-[var(--border-main)] bg-[var(--bg-app)] px-3 py-2 text-xs font-bold text-[var(--text-main)] hover:border-[var(--accent-cyan)]/40">
+                    ◐ {lang.toUpperCase()}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <NotesPanel isOpen={showNotes} onClose={() => setShowNotes(false)} />
     </header>
   );

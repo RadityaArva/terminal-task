@@ -24,7 +24,7 @@ export default function ShortcutCheatsheet({ isOpen, onClose }: ShortcutCheatshe
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-mono animate-in fade-in duration-150">
+    <div className="terminal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-mono">
       <div 
         className="w-full max-w-lg bg-[var(--bg-surface)] border-2 border-[var(--border-main)] rounded-lg shadow-2xl overflow-hidden text-[var(--text-main)]"
         onClick={(e) => e.stopPropagation()}
@@ -59,4 +59,3 @@ export default function ShortcutCheatsheet({ isOpen, onClose }: ShortcutCheatshe
     </div>
   );
 }
-

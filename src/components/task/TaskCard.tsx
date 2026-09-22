@@ -1,16 +1,21 @@
 'use client';
 
+import { memo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Task, TaskPriority, useTermFlowStore } from '@/lib/store';
 import { getTranslation } from '@/lib/i18n';
+import RiskRadarBadge from './RiskRadarBadge';
 
 interface TaskCardProps {
   task: Task;
   isSelected?: boolean;
   onSelect: () => void;
+  onDelete?: () => void;
 }
 
-export default function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
+function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps) {
   const { lang } = useTermFlowStore();
+  const shouldReduceMotion = useReducedMotion();
 
   const priorityColors: Record<TaskPriority, string> = {
     urgent: 'border-[var(--accent-red)] text-[var(--accent-red)] bg-[var(--accent-red)]/10',
@@ -23,28 +28,52 @@ export default function TaskCard({ task, isSelected, onSelect }: TaskCardProps) 
   const totalSubtasks = task.subtasks.length;
 
   return (
-    <div
+    <motion.div
       onClick={onSelect}
-      className={`p-3 rounded-md border bg-[var(--bg-surface)] font-mono text-xs transition-all cursor-pointer shadow-xs hover:border-[var(--accent-cyan)] ${
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.01 }}
+      transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: [0.22, 0.8, 0.24, 1] }}
+      className={`relative cursor-pointer rounded-md border bg-[var(--bg-surface)] p-3 font-mono text-xs shadow-xs transition-colors duration-150 hover:border-[var(--accent-cyan)] ${
         isSelected
           ? 'border-2 border-[var(--accent-cyan)] shadow-md ring-1 ring-[var(--accent-cyan)]/30'
           : 'border-[var(--border-main)]'
       }`}
     >
-      {/* Top row: ID & Priority */}
+      {/* Top row: ID, priority, and quick delete */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[var(--accent-purple)] font-bold">
           {task.id}
         </span>
-        <span className={`px-1.5 py-0.5 rounded border text-[10px] uppercase font-bold ${priorityColors[task.priority]}`}>
-          {getTranslation(`priority.${task.priority}`, lang)}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`px-1.5 py-0.5 rounded border text-[10px] uppercase font-bold ${priorityColors[task.priority]}`}>
+            {getTranslation(`priority.${task.priority}`, lang)}
+          </span>
+          <span title={`Energy: ${task.energyLevel || 'medium'}`} className="rounded border border-[var(--accent-purple)]/50 px-1.5 py-0.5 text-[10px] text-[var(--accent-purple)]">
+            {task.energyLevel === 'high' ? '⚡' : task.energyLevel === 'low' ? '▱' : '▰'} {task.energyLevel || 'medium'}
+          </span>
+          {onDelete && (
+            <button
+              type="button"
+              aria-label={`Delete ${task.id}`}
+              title="Delete task"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete();
+              }}
+              className="rounded border border-transparent px-1.5 py-0.5 text-[10px] text-[var(--text-muted)] transition hover:border-[var(--accent-red)]/60 hover:bg-[var(--accent-red)]/10 hover:text-[var(--accent-red)]"
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Task Title */}
       <h4 className="font-bold text-[var(--text-bright)] text-sm mb-1 line-clamp-2">
         {task.title}
       </h4>
+      <RiskRadarBadge task={task} />
 
       {/* Description Snippet */}
       {task.description && (
@@ -91,6 +120,8 @@ export default function TaskCard({ task, isSelected, onSelect }: TaskCardProps) 
           </span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
+
+export default memo(TaskCard);

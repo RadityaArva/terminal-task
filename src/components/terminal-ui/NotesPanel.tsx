@@ -12,14 +12,15 @@ export default function NotesPanel({ isOpen, onClose }: NotesPanelProps) {
   const { activeProjectId, projectNotes, saveProjectNote, deleteProjectNote } = useTermFlowStore();
   const notes = Array.isArray(projectNotes[activeProjectId]) ? projectNotes[activeProjectId] : [];
   const [selectedId, setSelectedId] = useState<string | undefined>(notes[0]?.id);
-  const selected = notes.find((note) => note.id === selectedId);
+  const activeSelectedId = notes.some((note) => note.id === selectedId) ? selectedId : undefined;
+  const selected = notes.find((note) => note.id === activeSelectedId);
   const [mode, setMode] = useState<'edit' | 'read'>('edit');
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6" onClick={onClose}>
-      <section className="flex h-[min(760px,92vh)] w-full max-w-5xl overflow-hidden rounded-lg border-2 border-[var(--border-main)] bg-[var(--bg-surface)] shadow-2xl" onClick={(event) => event.stopPropagation()}>
+    <div className="terminal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6" onClick={onClose}>
+      <section className="terminal-modal flex h-[min(760px,92vh)] w-full max-w-5xl overflow-hidden rounded-lg border-2 border-[var(--border-main)] bg-[var(--bg-surface)] shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <aside className="hidden w-56 shrink-0 border-r border-[var(--border-main)] bg-[var(--bg-app)] p-3 sm:block">
           <div className="mb-3 flex items-center justify-between text-xs font-bold text-[var(--accent-yellow)]"><span>notes/</span><button onClick={() => setSelectedId(undefined)} className="text-lg">+</button></div>
           <div className="space-y-1">
@@ -33,24 +34,24 @@ export default function NotesPanel({ isOpen, onClose }: NotesPanelProps) {
           </header>
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             <div className="flex gap-2 sm:hidden">
-              <select value={selectedId || ''} onChange={(event) => setSelectedId(event.target.value || undefined)} className="terminal-input">
+              <select value={activeSelectedId || ''} onChange={(event) => setSelectedId(event.target.value || undefined)} className="terminal-input">
                 <option value="">New note</option>
                 {notes.map((note) => <option key={note.id} value={note.id}>{note.name}</option>)}
               </select>
             </div>
             {mode === 'read' && selected ? <NoteReader note={selected} onEdit={() => setMode('edit')} /> : <NoteEditor
-            key={selectedId || 'new'}
+            key={activeSelectedId || 'new'}
             initialName={selected?.name || ''}
             initialContent={selected?.content || ''}
             onSave={(name, content) => {
-              const noteId = selectedId || `note-${Date.now()}`;
+              const noteId = activeSelectedId || `note-${Date.now()}`;
               saveProjectNote(activeProjectId, { id: noteId, name, content });
               setSelectedId(noteId);
             }}
             />}
           </div>
           <footer className="flex justify-between border-t border-[var(--border-main)] bg-[var(--bg-app)] px-4 py-3">
-            <button disabled={!selectedId} onClick={() => { if (selectedId) { deleteProjectNote(activeProjectId, selectedId); setSelectedId(undefined); } }} className="terminal-button text-[var(--accent-red)] disabled:opacity-30">Hapus</button>
+            <button disabled={!activeSelectedId} onClick={() => { if (activeSelectedId) { deleteProjectNote(activeProjectId, activeSelectedId); setSelectedId(undefined); } }} className="terminal-button text-[var(--accent-red)] disabled:opacity-30">Hapus</button>
             <button onClick={() => setMode(mode === 'edit' ? 'read' : 'edit')} disabled={!selected} className="terminal-button disabled:opacity-30">{mode === 'edit' ? 'Baca seperti PDF' : 'Kembali edit'}</button>
           </footer>
         </div>

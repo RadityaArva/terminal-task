@@ -1,12 +1,13 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { ChangeEvent, FormEvent, useState } from 'react';
 import { useTermFlowStore, UserProfile } from '@/lib/store';
 import { getTranslation } from '@/lib/i18n';
 
 export default function ProfileView() {
   const store = useTermFlowStore();
   const { profile, activityLogs, tasks, lang, projectNotes } = store;
+  const { focusSessions } = store;
   const [modal, setModal] = useState<'profile' | 'settings' | null>(null);
   const completedTasks = tasks.filter((task) => task.status === 'done');
   const completedDates = new Set(completedTasks.map((task) => (task.completedAt || task.createdAt).slice(0, 10)));
@@ -25,6 +26,12 @@ export default function ProfileView() {
     return Math.min(3, completedTasks.filter((task) => (task.completedAt || task.createdAt).slice(0, 10) === dateKey(date)).length);
   });
   const notes = Object.values(projectNotes).flat();
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  weekStart.setHours(0, 0, 0, 0);
+  const focusMinutesThisWeek = focusSessions
+    .filter((session) => new Date(session.endedAt) >= weekStart)
+    .reduce((total, session) => total + session.durationMinutes, 0);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 font-mono">
@@ -38,10 +45,11 @@ export default function ProfileView() {
           <p className="mt-2 text-xs italic text-[var(--text-main)]">&quot;{profile.bio}&quot;</p>
         </div>
         <div className="flex gap-2"><button onClick={() => setModal('profile')} className="terminal-button">Edit profile</button><button onClick={() => setModal('settings')} className="terminal-button">⚙ Settings</button></div>
-        <div className="grid w-full grid-cols-3 gap-2 text-center sm:w-auto">
+        <div className="grid w-full grid-cols-2 gap-2 text-center sm:w-auto sm:grid-cols-4">
           <Stat value={completedTasks.length} label={getTranslation('profile.completedTasks', lang)} color="main" />
           <Stat value={`🔥 ${streak}d`} label={getTranslation('profile.dailyStreak', lang)} color="yellow" />
           <Stat value={tasks.length} label={getTranslation('profile.totalTasks', lang)} color="purple" />
+          <Stat value={`${(focusMinutesThisWeek / 60).toFixed(1)}h`} label="Focus minggu ini" color="cyan" />
         </div>
       </section>
 
@@ -63,18 +71,42 @@ export default function ProfileView() {
   );
 }
 
-function Stat({ value, label, color }: { value: string | number; label: string; color: 'main' | 'yellow' | 'purple' }) {
+function Stat({ value, label, color }: { value: string | number; label: string; color: 'main' | 'yellow' | 'purple' | 'cyan' }) {
   return <div className="min-w-24 rounded-lg border border-[var(--border-main)] bg-[var(--bg-app)] p-3"><div className={`text-xl font-bold text-[var(--accent-${color})]`}>{value}</div><div className="mt-1 text-[10px] uppercase text-[var(--text-muted)]">{label}</div></div>;
 }
 
 function ModalShell({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}><section className="terminal-panel w-full max-w-lg overflow-hidden" onClick={(event) => event.stopPropagation()}><header className="flex items-center justify-between border-b border-[var(--border-main)] bg-[var(--bg-app)] px-5 py-4"><span className="font-bold text-[var(--accent-cyan)]">&gt; {title}</span><button onClick={onClose} className="text-[var(--text-muted)]">✕</button></header><div className="p-5">{children}</div></section></div>;
+  return <div className="terminal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}><section className="terminal-panel w-full max-w-lg overflow-hidden" onClick={(event) => event.stopPropagation()}><header className="flex items-center justify-between border-b border-[var(--border-main)] bg-[var(--bg-app)] px-5 py-4"><span className="font-bold text-[var(--accent-cyan)]">&gt; {title}</span><button onClick={onClose} className="text-[var(--text-muted)]">✕</button></header><div className="p-5">{children}</div></section></div>;
 }
 
 function ProfileModal({ profile, onClose, onSave }: { profile: UserProfile; onClose: () => void; onSave: (updates: Partial<UserProfile>) => void }) {
   const [draft, setDraft] = useState(profile);
+  const [photoError, setPhotoError] = useState('');
   const submit = (event: FormEvent) => { event.preventDefault(); onSave(draft); };
-  return <ModalShell title="profile --edit" onClose={onClose}><form onSubmit={submit} className="grid gap-3 text-xs"><div className="flex items-center gap-3 rounded border border-[var(--border-main)] bg-[var(--bg-app)] p-3"><div className="h-12 w-12 rounded-full bg-cover bg-center" style={{ backgroundImage: `url("${draft.avatarUrl}")` }} /><span className="text-[var(--text-muted)]">Profile identity</span></div><input className="terminal-input" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Nama" /><input className="terminal-input" value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} placeholder="Username" /><input className="terminal-input" value={draft.avatarUrl} onChange={(event) => setDraft({ ...draft, avatarUrl: event.target.value })} placeholder="URL foto profile" /><input className="terminal-input" value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Role" /><textarea className="terminal-input" value={draft.bio} onChange={(event) => setDraft({ ...draft, bio: event.target.value })} placeholder="Bio" /><button className="terminal-button terminal-button-primary">Simpan profile</button></form></ModalShell>;
+  const choosePhoto = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('File harus berupa gambar.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setPhotoError('Ukuran foto maksimal 2 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        setDraft((current) => ({ ...current, avatarUrl: result }));
+        setPhotoError('');
+      }
+    };
+    reader.onerror = () => setPhotoError('Foto tidak dapat dibaca. Silakan coba file lain.');
+    reader.readAsDataURL(file);
+  };
+  return <ModalShell title="profile --edit" onClose={onClose}><form onSubmit={submit} className="grid gap-3 text-xs"><div className="flex items-center gap-3 rounded border border-[var(--border-main)] bg-[var(--bg-app)] p-3"><div className="h-12 w-12 shrink-0 rounded-full bg-cover bg-center" style={{ backgroundImage: draft.avatarUrl ? `url("${draft.avatarUrl}")` : undefined }} /> <div className="min-w-0"><span className="block text-[var(--text-muted)]">Profile identity</span><label className="mt-2 inline-flex cursor-pointer items-center rounded border border-[var(--accent-cyan)]/60 px-2 py-1 text-[11px] font-bold text-[var(--accent-cyan)] transition hover:bg-[var(--accent-cyan)]/10"><span>📷 Pilih foto</span><input type="file" accept="image/*" className="sr-only" onChange={choosePhoto} /></label><span className="ml-2 text-[10px] text-[var(--text-muted)]">JPG, PNG, WEBP · maks. 2 MB</span>{photoError && <p className="mt-1 text-[10px] text-[var(--accent-red)]">{photoError}</p>}</div></div><input className="terminal-input" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Nama" /><input className="terminal-input" value={draft.username} onChange={(event) => setDraft({ ...draft, username: event.target.value })} placeholder="Username" /><input className="terminal-input" value={draft.avatarUrl} onChange={(event) => { setDraft({ ...draft, avatarUrl: event.target.value }); setPhotoError(''); }} placeholder="URL foto profile (opsional)" /><input className="terminal-input" value={draft.role} onChange={(event) => setDraft({ ...draft, role: event.target.value })} placeholder="Role" /><textarea className="terminal-input" value={draft.bio} onChange={(event) => setDraft({ ...draft, bio: event.target.value })} placeholder="Bio" /><button className="terminal-button terminal-button-primary">Simpan profile</button></form></ModalShell>;
 }
 
 function SettingsModal({ onClose }: { onClose: () => void }) {

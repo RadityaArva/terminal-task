@@ -7,11 +7,15 @@
   },
   "nav": {
     "board": "Board (Kanban)",
-    "list": "Daftar (List)",
     "grid": "Tabel (Grid)",
     "timeline": "Timeline",
+    "graph": "Graf Dependensi",
     "zen": "Mode Zen",
-    "profile": "Profil"
+    "profile": "Profil",
+    "inbox": "Inbox",
+    "mission": "Mission",
+    "analytics": "Analitik",
+    "notes": "Catatan"
   },
   "status": {
     "todo": "Akan Dikerjakan",
@@ -97,4 +101,3 @@
     "csv": "Export ke CSV"
   }
 }
-

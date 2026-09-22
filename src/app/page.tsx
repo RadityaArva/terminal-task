@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useSyncExternalStore } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useTermFlowStore } from '@/lib/store';
 import { applyTheme } from '@/lib/themes';
 import Header from '@/components/terminal-ui/Header';
@@ -9,15 +10,25 @@ import ShortcutCheatsheet from '@/components/terminal-ui/ShortcutCheatsheet';
 import TerminalLogView from '@/components/terminal-ui/TerminalLogView';
 
 import BoardView from '@/components/views/BoardView';
-import ListView from '@/components/views/ListView';
 import GridView from '@/components/views/GridView';
 import TimelineView from '@/components/views/TimelineView';
+import GraphView from '@/components/views/GraphView';
+import MissionControlView from '@/components/views/MissionControlView';
+import AnalyticsView from '@/components/views/AnalyticsView';
+import NewProjectModal from '@/components/terminal-ui/NewProjectModal';
 import ZenView from '@/components/views/ZenView';
 import ProfileView from '@/components/views/ProfileView';
+import InboxView from '@/components/views/InboxView';
+import NotesDashboard from '@/components/views/NotesDashboard';
 
 import TaskDetailModal from '@/components/task/TaskDetailModal';
 import LoginGate from '@/components/auth/LoginGate';
 import DeadlineNotice from '@/components/terminal-ui/DeadlineNotice';
+import FocusStatusBar from '@/components/terminal-ui/FocusStatusBar';
+import WeeklyReviewModal from '@/components/terminal-ui/WeeklyReviewModal';
+import QuickCaptureModal from '@/components/terminal-ui/QuickCaptureModal';
+import GlobalStatusBar from '@/components/terminal-ui/GlobalStatusBar';
+import StandupReportModal from '@/components/terminal-ui/StandupReportModal';
 
 export default function Home() {
   const {
@@ -32,32 +43,82 @@ export default function Home() {
     setSearchFilter,
     setThemeId,
     setLang,
-    purgeExpiredTasks
+    purgeExpiredTasks,
+    isPomodoroRunning,
+    tickPomodoro
   } = useTermFlowStore();
   const isAuthenticated = useTermFlowStore((state) => state.isAuthenticated);
 
   const [isCmdPaletteOpen, setIsCmdPaletteOpen] = useState(false);
   const [isCheatsheetOpen, setIsCheatsheetOpen] = useState(false);
+  const [isWeeklyReviewOpen, setIsWeeklyReviewOpen] = useState(false);
+  const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState<'today' | 'week' | null>(null);
+  const [isNewProjectOpen, setIsNewProjectOpen] = useState(false);
+  const [newNoteTitle, setNewNoteTitle] = useState('');
   const [gKeyPressed, setGKeyPressed] = useState(false);
   const mounted = useSyncExternalStore(
     () => () => undefined,
     () => true,
     () => false
   );
+  const shouldReduceMotion = useReducedMotion();
 
   const commands = useMemo(() => [
+    {
+      id: 'start-focus',
+      label: 'Start focus',
+      description: 'Mulai sesi deep work 25 menit pada task terpilih',
+      shortcut: 'start focus',
+      execute: () => {
+        if (selectedTaskId) useTermFlowStore.getState().startFocus(selectedTaskId, 25);
+      }
+    },
+    {
+      id: 'capture',
+      label: 'Capture task to Inbox',
+      description: 'Buat task cepat tanpa mengisi detail proyek',
+      shortcut: 'capture',
+      execute: () => setIsQuickCaptureOpen(true)
+    },
+    {
+      id: 'filter-energy-high',
+      label: 'Filter energy:high',
+      description: 'Tampilkan task dengan kebutuhan energi tinggi',
+      execute: () => setSearchFilter('energy:high')
+    },
+    {
+      id: 'view-inbox',
+      label: 'Open Inbox',
+      description: 'Sortir task yang belum memiliki proyek',
+      shortcut: 'g i',
+      execute: () => setViewMode('inbox')
+    },
+    {
+      id: 'review-week',
+      label: 'Review week',
+      description: 'Ringkasan task mingguan dan task overdue',
+      shortcut: 'review week',
+      execute: () => setIsWeeklyReviewOpen(true)
+    },
+    {
+      id: 'report-today',
+      label: 'Report today',
+      description: 'Buat ringkasan Markdown untuk hari ini',
+      execute: () => setReportPeriod('today')
+    },
+    {
+      id: 'report-week',
+      label: 'Report week',
+      description: 'Buat ringkasan Markdown minggu ini',
+      execute: () => setReportPeriod('week')
+    },
     {
       id: 'view-board',
       label: 'Open board view',
       description: 'Switch to the kanban board',
       shortcut: 'g d',
       execute: () => setViewMode('board')
-    },
-    {
-      id: 'view-list',
-      label: 'Open list view',
-      description: 'Switch to the task list',
-      execute: () => setViewMode('list')
     },
     {
       id: 'view-grid',
@@ -70,6 +131,47 @@ export default function Home() {
       label: 'Open timeline view',
       description: 'Switch to the project timeline',
       execute: () => setViewMode('timeline')
+    },
+    {
+      id: 'view-graph',
+      label: 'Open dependency graph',
+      description: 'Visualize task dependencies for the active project',
+      shortcut: 'view graph',
+      execute: () => setViewMode('graph')
+    },
+    {
+      id: 'focus-mission-control',
+      label: 'Focus mission control',
+      description: 'Buka task prioritas tinggi dari semua project',
+      execute: () => setViewMode('mission')
+    },
+    {
+      id: 'view-analytics',
+      label: 'Open burndown and velocity',
+      description: 'Lihat grafik burndown dan velocity project aktif',
+      shortcut: 'view analytics',
+      execute: () => setViewMode('analytics')
+    },
+    {
+      id: 'new-project',
+      label: 'New project',
+      description: 'Buat project baru dengan akses user dan role',
+      shortcut: 'new project',
+      execute: () => setIsNewProjectOpen(true)
+    },
+    {
+      id: 'new-note',
+      label: 'New note "judul"',
+      description: 'Buat catatan Markdown baru di dashboard Notes',
+      shortcut: 'new note',
+      execute: () => { useTermFlowStore.getState().addNote({ title: 'Untitled note' }); setNewNoteTitle(String(Date.now())); setViewMode('notes'); }
+    },
+    {
+      id: 'goto-notes',
+      label: 'Go to notes',
+      description: 'Buka dashboard catatan',
+      shortcut: 'goto notes',
+      execute: () => setViewMode('notes')
     },
     {
       id: 'view-zen',
@@ -108,7 +210,12 @@ export default function Home() {
       description: 'Change the terminal color theme',
       execute: () => setThemeId(id)
     }))
-  ], [setLang, setSearchFilter, setThemeId, setViewMode]);
+  ], [selectedTaskId, setLang, setSearchFilter, setThemeId, setViewMode]);
+
+  useEffect(() => {
+    // Reset a legacy persisted List view after it was removed.
+    if ((viewMode as string) === 'list') setViewMode('board');
+  }, [viewMode, setViewMode]);
 
   useEffect(() => {
     applyTheme(themeId);
@@ -119,6 +226,12 @@ export default function Home() {
     const interval = window.setInterval(purgeExpiredTasks, 60_000);
     return () => window.clearInterval(interval);
   }, [purgeExpiredTasks]);
+
+  useEffect(() => {
+    if (!isPomodoroRunning) return;
+    const interval = window.setInterval(tickPomodoro, 1000);
+    return () => window.clearInterval(interval);
+  }, [isPomodoroRunning, tickPomodoro]);
 
   // Project filtered tasks list for keyboard navigation
   const projectTasks = tasks.filter((t) => t.projectId === activeProjectId);
@@ -217,7 +330,7 @@ export default function Home() {
   if (!isAuthenticated) return <LoginGate />;
 
   return (
-    <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex flex-col font-mono transition-colors duration-200">
+    <div className="terminal-app min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex flex-col font-mono transition-colors duration-200">
       {/* App Header */}
       <Header
         onOpenCommandPalette={() => setIsCmdPaletteOpen(true)}
@@ -241,16 +354,17 @@ export default function Home() {
       )}
 
       {/* Main View Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <AnimatePresence mode="wait" initial={false}>
+      <motion.main
+        key={viewMode}
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={shouldReduceMotion ? undefined : { opacity: 0, y: -3 }}
+        transition={{ duration: shouldReduceMotion ? 0 : 0.22, ease: [0.22, 0.8, 0.24, 1] }}
+        className="terminal-main flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 space-y-6"
+      >
         {viewMode === 'board' && (
           <BoardView
-            selectedTaskId={selectedTaskId}
-            onSelectTask={(id) => setSelectedTaskId(id)}
-          />
-        )}
-
-        {viewMode === 'list' && (
-          <ListView
             selectedTaskId={selectedTaskId}
             onSelectTask={(id) => setSelectedTaskId(id)}
           />
@@ -269,13 +383,22 @@ export default function Home() {
           />
         )}
 
+        {viewMode === 'graph' && (
+          <GraphView onSelectTask={(id) => setSelectedTaskId(id)} />
+        )}
+        {viewMode === 'mission' && <MissionControlView onSelectTask={(id) => setSelectedTaskId(id)} />}
+        {viewMode === 'analytics' && <AnalyticsView />}
+        {viewMode === 'notes' && <NotesDashboard key={newNoteTitle} />}
+
         {viewMode === 'zen' && <ZenView />}
 
         {viewMode === 'profile' && <ProfileView />}
+        {viewMode === 'inbox' && <InboxView onSelectTask={(id) => setSelectedTaskId(id)} />}
 
         {/* Git Log Terminal Activity Widget */}
         <TerminalLogView />
-      </main>
+      </motion.main>
+      </AnimatePresence>
 
       {/* Footer */}
       <footer className="border-t border-[var(--border-main)]/50 bg-[var(--bg-surface)] p-4 text-center text-xs text-[var(--text-muted)]">
@@ -284,6 +407,7 @@ export default function Home() {
           Press <kbd className="border border-[var(--border-main)] px-1 rounded text-[var(--accent-cyan)]">Ctrl+K</kbd> for command palette | Press <kbd className="border border-[var(--border-main)] px-1 rounded text-[var(--accent-yellow)]">?</kbd> for shortcuts cheatsheet
         </p>
       </footer>
+      <GlobalStatusBar />
 
       {/* Command Palette Modal */}
       <CommandPalette
@@ -303,6 +427,11 @@ export default function Home() {
         taskId={selectedTaskId}
         onClose={() => setSelectedTaskId(null)}
       />
+      <FocusStatusBar />
+      <WeeklyReviewModal isOpen={isWeeklyReviewOpen} onClose={() => setIsWeeklyReviewOpen(false)} />
+      <QuickCaptureModal isOpen={isQuickCaptureOpen} onClose={() => setIsQuickCaptureOpen(false)} />
+      {reportPeriod && <StandupReportModal period={reportPeriod} onClose={() => setReportPeriod(null)} />}
+      <NewProjectModal isOpen={isNewProjectOpen} onClose={() => setIsNewProjectOpen(false)} />
     </div>
   );
 }

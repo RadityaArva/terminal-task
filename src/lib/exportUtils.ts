@@ -44,19 +44,29 @@ export function exportTasksToMarkdown(tasks: Task[], projectName: string = 'Term
 
 export function exportTasksToCSV(tasks: Task[]) {
   const headers = ['ID', 'Title', 'Status', 'Priority', 'Assignee', 'Due Date', 'Tags', 'Subtasks Count', 'Created At'];
-  const rows = tasks.map(t => [
-    t.id,
-    `"${t.title.replace(/"/g, '""')}"`,
-    t.status,
-    t.priority,
-    t.assignee || '',
-    t.dueDate || '',
-    `"${t.labels.join(', ')}"`,
-    `${t.subtasks.filter(s => s.completed).length}/${t.subtasks.length}`,
-    t.createdAt
+
+  // Protect against CSV injection by prefixing dangerous leading characters
+  // (=, +, -, @) with a single quote. See: https://owasp.org/www-community/vulnerabilities/CSV_Injection
+  const sanitizeCell = (value: string) => {
+    if (!value) return '';
+    const trimmed = String(value);
+    if (/^[=+\-@]/.test(trimmed)) return `'${trimmed}`;
+    return trimmed;
+  };
+
+  const rows = tasks.map((t) => [
+    sanitizeCell(t.id),
+    `"${sanitizeCell(t.title).replace(/"/g, '""')}"`,
+    sanitizeCell(t.status),
+    sanitizeCell(t.priority),
+    sanitizeCell(t.assignee || ''),
+    sanitizeCell(t.dueDate || ''),
+    `"${sanitizeCell(t.labels.join(', ')).replace(/"/g, '""')}"`,
+    sanitizeCell(`${t.subtasks.filter((s) => s.completed).length}/${t.subtasks.length}`),
+    sanitizeCell(t.createdAt)
   ]);
 
-  const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+  const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
   const dataStr = "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
   downloadFile(dataStr, `termflow-tasks-${new Date().toISOString().slice(0,10)}.csv`);
 }
@@ -69,4 +79,3 @@ function downloadFile(dataUri: string, filename: string) {
   downloadAnchor.click();
   downloadAnchor.remove();
 }
-
