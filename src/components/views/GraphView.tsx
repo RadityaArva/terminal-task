@@ -16,13 +16,22 @@ export default function GraphView({ onSelectTask }: GraphViewProps) {
   const { tasks, activeProjectId, searchFilter, selectedTaskId } = useTermFlowStore();
   const [zoom, setZoom] = useState(1);
   const [focusTaskId, setFocusTaskId] = useState<string | null>(selectedTaskId);
-  const projectTasks = tasks.filter((task) => task.projectId === activeProjectId);
-  const visibleTasks = projectTasks.filter((task) => {
-    if (!searchFilter) return true;
-    const query = searchFilter.toLowerCase();
-    return [task.title, task.description, task.status, task.priority, ...task.labels]
-      .some((value) => value.toLowerCase().includes(query));
-  });
+
+  const visibleTasks = useMemo(() => {
+    // Include tasks in active project + their direct dependencies
+    const baseTasks = tasks.filter((task) => task.projectId === activeProjectId);
+    const dependencyIds = new Set(baseTasks.flatMap(t => t.dependencyIds || []));
+    const allRelevant = new Set([...baseTasks.map(t => t.id), ...dependencyIds]);
+    
+    let filtered = tasks.filter(t => allRelevant.has(t.id));
+
+    if (searchFilter) {
+      const query = searchFilter.toLowerCase();
+      filtered = filtered.filter((task) => [task.title, task.description, task.status, task.priority, ...task.labels]
+        .some((value) => value.toLowerCase().includes(query)));
+    }
+    return filtered;
+  }, [tasks, activeProjectId, searchFilter]);
 
   const layout = useMemo(() => {
     const taskIds = new Set(visibleTasks.map((task) => task.id));
@@ -112,7 +121,7 @@ export default function GraphView({ onSelectTask }: GraphViewProps) {
       </div>
       {visibleTasks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--border-main)] p-10 text-center text-xs text-[var(--text-muted)]">
-          Belum ada task pada project ini.
+          Belum ada task atau dependency pada project ini.
         </div>
       ) : isMobile ? (
         <div className="space-y-3 rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)] p-3">

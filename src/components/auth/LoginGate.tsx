@@ -109,12 +109,8 @@ export default function LoginGate() {
             >
               Login ↵
             </button>
-
-            <p className="text-center text-[10px] leading-relaxed text-[var(--text-muted)]">
-              Gunakan password yang tersimpan di aplikasi Anda.<br />
-              Default: <code className="rounded bg-[var(--bg-app)] px-1 py-0.5 text-[var(--accent-cyan)]">termflow123</code> — ubah via Profile → Settings.
-            </p>
-          </motion.form>
+            <p className="text-center text-[10px] leading-relaxed text-[var(--text-muted)]">Lupa password? Atur ulang via Profile → Settings setelah login.</p>
+</motion.form>
         ) : (
           <motion.div
             key="login-loading"

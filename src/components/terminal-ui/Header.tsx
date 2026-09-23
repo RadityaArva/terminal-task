@@ -90,17 +90,34 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
 
   const activeProject = projects.find(p => p.id === activeProjectId) || projects[0];
 
-  const views: { id: ViewMode; labelKey: string; icon: string }[] = [
-    { id: 'board', labelKey: 'nav.board', icon: '▦' },
-    { id: 'grid', labelKey: 'nav.grid', icon: '▭' },
-    { id: 'timeline', labelKey: 'nav.timeline', icon: '◷' },
-    { id: 'graph', labelKey: 'nav.graph', icon: '⬡' },
-    { id: 'zen', labelKey: 'nav.zen', icon: '◎' },
-    { id: 'profile', labelKey: 'nav.profile', icon: '◐' },
-    { id: 'inbox', labelKey: 'nav.inbox', icon: '✉' },
-    { id: 'mission', labelKey: 'nav.mission', icon: '⬢' },
-    { id: 'analytics', labelKey: 'nav.analytics', icon: '▅' },
-    { id: 'notes', labelKey: 'nav.notes', icon: '✎' },
+  const NavIcon = ({ id, active }: { id: ViewMode; active?: boolean }) => {
+    const cls = active ? 'text-[var(--accent-main)]' : 'text-current';
+    const common = `h-4 w-4 shrink-0 ${cls}`;
+    switch (id) {
+      case 'board': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>;
+      case 'grid': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 8h18M8 4v16M14 4v16"/></svg>;
+      case 'timeline': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/><path d="M3 12h2M19 12h2M12 3v2M12 19v2"/></svg>;
+      case 'graph': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="12" cy="17" r="3"/><path d="M9.5 9l2.5 4M14.5 9l-2.5 4"/></svg>;
+      case 'zen': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="8"/><path d="M12 12a4 4 0 0 0 4-4"/><path d="M8 12a4 4 0 0 1 4 4"/></svg>;
+      case 'profile': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M5 19a7 7 0 0 1 14 0"/></svg>;
+      case 'inbox': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 7l9 7 9-7"/></svg>;
+      case 'mission': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 3l7 4v6l-7 4-7-4V7l7-4z"/><circle cx="12" cy="12" r="2.5"/></svg>;
+      case 'analytics': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-8"/><path d="M2 19h20"/></svg>;
+      case 'notes': return <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v5h5"/><path d="M9 13h8M9 17h6"/></svg>;
+      default: return null;
+    }
+  };
+  const views: { id: ViewMode; labelKey: string }[] = [
+    { id: 'board', labelKey: 'nav.board' },
+    { id: 'grid', labelKey: 'nav.grid' },
+    { id: 'timeline', labelKey: 'nav.timeline' },
+    { id: 'graph', labelKey: 'nav.graph' },
+    { id: 'zen', labelKey: 'nav.zen' },
+    { id: 'profile', labelKey: 'nav.profile' },
+    { id: 'inbox', labelKey: 'nav.inbox' },
+    { id: 'mission', labelKey: 'nav.mission' },
+    { id: 'analytics', labelKey: 'nav.analytics' },
+    { id: 'notes', labelKey: 'nav.notes' },
   ];
   const primaryViews = views.slice(0, 4);
   const secondaryViews = views.slice(4);
@@ -137,7 +154,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                 title={getTranslation(v.labelKey, lang)}
                 aria-current={viewMode === v.id ? 'page' : undefined}
               >
-                <span className="text-[13px] leading-none opacity-90">{v.icon}</span>
+                <NavIcon id={v.id} active={viewMode === v.id} />
                 <span className="hidden 2xl:inline">{getTranslation(v.labelKey, lang).replace(' (Kanban)', '').replace(' Table', '')}</span>
               </button>
             ))}
@@ -215,7 +232,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                   <div className="px-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Views</div>
                   {secondaryViews.map((v) => (
                     <button key={v.id} onClick={() => setViewMode(v.id)} className={`menu-item flex items-center gap-2 ${viewMode === v.id ? 'bg-[var(--bg-muted)] text-[var(--accent-main)]' : ''}`}>
-                      <span className="w-4 text-center text-xs">{v.icon}</span> {getTranslation(v.labelKey, lang)}
+                      <NavIcon id={v.id} active={viewMode === v.id} /> {getTranslation(v.labelKey, lang)}
                     </button>
                   ))}
                 </motion.div>
@@ -329,7 +346,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                       onClick={() => setViewMode(v.id)}
                       className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center transition ${active ? 'border-[var(--accent-main)]/40 bg-[var(--accent-main)]/10 text-[var(--accent-main)]' : 'border-[var(--border-main)]/40 bg-[var(--bg-surface)] text-[var(--text-muted)] hover:border-[var(--accent-cyan)]/30 hover:text-[var(--text-main)]'}`}
                     >
-                      <span className="text-base leading-none">{v.icon}</span>
+                      <NavIcon id={v.id} active={viewMode === v.id} />
                       <span className="line-clamp-1 text-[10px] font-semibold leading-tight tracking-wide">{getTranslation(v.labelKey, lang).split(' ')[0]}</span>
                       {v.id === 'inbox' && inboxCount > 0 && <span className="rounded-full bg-[var(--accent-red)] px-1.5 py-0.5 text-[9px] font-bold leading-none text-white">{inboxCount}</span>}
                     </button>
