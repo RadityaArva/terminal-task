@@ -3,6 +3,7 @@
 import { FormEvent, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTermFlowStore } from '@/lib/store';
+import { Lock, KeyRound, Terminal, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginGate() {
   const login = useTermFlowStore((state) => state.login);
@@ -79,7 +80,7 @@ export default function LoginGate() {
             </div>
 
             <label className="block text-xs font-bold tracking-wide text-[var(--text-muted)]">
-              PASSWORD
+              <span className="flex items-center gap-1.5"><Lock size={12} strokeWidth={2} /> PASSWORD</span>
               <input
                 autoFocus
                 type="password"
@@ -107,7 +108,7 @@ export default function LoginGate() {
               type="submit"
               className="terminal-button terminal-button-primary w-full py-2.5 text-sm tracking-wide"
             >
-              Login ↵
+              <KeyRound size={16} className="mr-2 inline" /> Login ↵
             </button>
             <p className="text-center text-[10px] leading-relaxed text-[var(--text-muted)]">Lupa password? Atur ulang via Profile → Settings setelah login.</p>
 </motion.form>

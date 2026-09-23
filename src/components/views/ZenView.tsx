@@ -1,6 +1,7 @@
 'use client';
 
 import { useTermFlowStore } from '@/lib/store';
+import { Sparkles, Play, Pause, RotateCcw, CheckCircle2 } from 'lucide-react';
 
 export default function ZenView() {
   const {
@@ -74,7 +75,7 @@ export default function ZenView() {
                 : 'bg-[var(--accent-main)] hover:bg-[var(--accent-hover)]'
             }`}
           >
-            {isPomodoroRunning ? '⏸ Jeda / Pause' : '▶ Mulai Focus'}
+            {isPomodoroRunning ? '⏸ <Pause size={14} className="mr-1.5 inline" aria-hidden /> Jeda / Pause' : '▶ <Play size={14} className="mr-1.5 inline" aria-hidden /> Mulai Focus'}
           </button>
           <button
             onClick={() => {
@@ -83,7 +84,7 @@ export default function ZenView() {
             }}
             className="px-4 py-2.5 rounded bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-bright)] border border-[var(--border-main)] font-bold text-sm transition-colors"
           >
-            🔄 Reset
+            🔄 <RotateCcw size={14} className="mr-1.5 inline" aria-hidden /> Reset
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useTermFlowStore } from '@/lib/store';
+import { Inbox, Plus } from 'lucide-react';
 
 export default function InboxView({ onSelectTask }: { onSelectTask: (id: string) => void }) {
   const { tasks, projects, updateTask } = useTermFlowStore();

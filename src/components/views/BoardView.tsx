@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useTermFlowStore, TaskStatus } from '@/lib/store';
+import { Plus, GripVertical } from 'lucide-react';
 import TaskCard from '../task/TaskCard';
 import { getTranslation } from '@/lib/i18n';
 
@@ -116,7 +117,7 @@ export default function BoardView({ onSelectTask, selectedTaskId }: BoardViewPro
             <span className="ml-2 hidden sm:inline">drag kartu ke kolom lain — desktop &amp; phone</span>
             <span className="ml-2 sm:hidden">tahan handle <span className="font-bold text-[var(--text-main)]">⋮⋮</span> lalu drag ke kolom lain</span>
           </div>
-          <button type="button" onClick={() => setIsComposerOpen((o) => !o)} className="rounded border border-[var(--accent-main)] bg-[var(--accent-main)]/10 px-3 py-2 text-xs font-bold text-[var(--accent-main)] transition hover:bg-[var(--accent-main)] hover:text-[var(--bg-app)]">{isComposerOpen ? '✕ Tutup form' : '+ New board'}</button>
+          <button type="button" onClick={() => setIsComposerOpen((o) => !o)} className="rounded border border-[var(--accent-main)] bg-[var(--accent-main)]/10 px-3 py-2 text-xs font-bold text-[var(--accent-main)] transition hover:bg-[var(--accent-main)] hover:text-[var(--bg-app)]">{isComposerOpen ? '✕ Tutup form' : '<Plus size={14} strokeWidth={2} className="mr-1.5 inline" aria-hidden /> New board'}</button>
         </div>
 
         {isComposerOpen && (

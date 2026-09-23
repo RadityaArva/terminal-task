@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useTermFlowStore } from '@/lib/store';
+import { BarChart3, TrendingDown } from 'lucide-react';
 
 const DAY = 86_400_000;
 

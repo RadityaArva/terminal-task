@@ -1,6 +1,7 @@
 'use client';
 
 import { useTermFlowStore } from '@/lib/store';
+import { AlertTriangle, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function DeadlineNotice() {

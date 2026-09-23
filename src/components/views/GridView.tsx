@@ -1,6 +1,7 @@
 'use client';
 
 import { useTermFlowStore, TaskStatus, TaskPriority } from '@/lib/store';
+import { SquarePen } from 'lucide-react';
 
 interface GridViewProps {
   onSelectTask: (id: string) => void;
@@ -158,7 +159,7 @@ export default function GridView({ onSelectTask, selectedTaskId }: GridViewProps
                       }}
                       className="px-2 py-1 bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-[var(--accent-cyan)] text-[var(--accent-cyan)] rounded text-[10px] font-bold"
                     >
-                      Edit ✏️
+                      <SquarePen size={12} strokeWidth={1.75} className="mr-1 inline" aria-hidden /> Edit
                     </button>
                   </td>
                 </tr>

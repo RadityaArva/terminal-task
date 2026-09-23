@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useTermFlowStore, TaskStatus, TaskPriority, Task, EnergyLevel } from '@/lib/store';
 import { getTranslation } from '@/lib/i18n';
+import { Trash2, Save, X, Play, Square, Send, Plus, Zap } from 'lucide-react';
 
 interface TaskDetailModalProps {
   taskId: string | null;
@@ -261,7 +262,7 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
               <div className="mt-1 text-[10px] text-[var(--text-muted)]">{isThisTaskFocusing ? `Sesi aktif · ${String(pomodoroMinutes).padStart(2, '0')}:${String(pomodoroSeconds).padStart(2, '0')}` : 'Mulai sesi 25 atau 50 menit untuk task ini.'}</div>
             </div>
             <div className="flex gap-2">
-              {isThisTaskFocusing ? <button type="button" onClick={stopFocus} className="terminal-button border-[var(--accent-red)]/60 text-[var(--accent-red)]">■ Stop focus</button> : <><button type="button" onClick={() => startFocus(task.id, 25)} className="terminal-button terminal-button-primary">▶ 25m</button><button type="button" onClick={() => startFocus(task.id, 50)} className="terminal-button">▶ 50m</button></>}
+              {isThisTaskFocusing ? <button type="button" onClick={stopFocus} className="terminal-button border-[var(--accent-red)]/60 text-[var(--accent-red)]"><Square size={12} strokeWidth={1.75} className="mr-1 inline" aria-hidden /> Stop focus</button> : <><button type="button" onClick={() => startFocus(task.id, 25)} className="terminal-button terminal-button-primary"><Play size={12} strokeWidth={1.75} className="mr-1 inline" aria-hidden /> 25m</button><button type="button" onClick={() => startFocus(task.id, 50)} className="terminal-button"><Play size={12} strokeWidth={1.75} className="mr-1 inline" aria-hidden /> 50m</button></>}
             </div>
           </div>
 
@@ -308,7 +309,7 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
             onClick={handleDelete}
             className="px-3 py-1.5 rounded bg-[var(--accent-red)]/10 text-[var(--accent-red)] border border-[var(--accent-red)]/40 hover:bg-[var(--accent-red)] hover:text-white text-xs font-bold transition-colors"
           >
-            🗑️ Hapus Task
+            <Trash2 size={13} strokeWidth={1.75} className="mr-1.5 inline" aria-hidden /> Hapus Task
           </button>
 
           <div className="flex space-x-2">
@@ -322,7 +323,7 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
               onClick={handleSave}
               className="px-4 py-1.5 rounded bg-[var(--accent-main)] text-[var(--bg-app)] hover:bg-[var(--accent-hover)] font-bold text-xs transition-colors"
             >
-              💾 Simpan Perubahan
+              <Save size={13} strokeWidth={1.75} className="mr-1.5 inline" aria-hidden /> Simpan Perubahan
             </button>
           </div>
         </div>

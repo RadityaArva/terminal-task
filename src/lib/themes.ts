@@ -1,17 +1,20 @@
-export type ThemeId = 
-  | 'github-dark' 
-  | 'github-light' 
-  | 'dracula' 
-  | 'nord' 
-  | 'solarized' 
-  | 'monokai' 
-  | 'dimmed' 
-  | 'high-contrast';
+export type ThemeId =
+  | 'github-dark'
+  | 'github-light'
+  | 'dracula'
+  | 'nord'
+  | 'solarized'
+  | 'monokai'
+  | 'dimmed'
+  | 'high-contrast'
+  | 'liquid-glass';
 
 export interface ThemeConfig {
   id: ThemeId;
   name: string;
   isDark: boolean;
+  /** Optional: applies glass-morphism tokens for the Liquid Glass theme */
+  glass?: boolean;
   styles: Record<string, string>;
 }
 
@@ -183,6 +186,36 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
       '--accent-red': '#ff0000',
       '--font-family': 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
     }
+  },
+  'liquid-glass': {
+    id: 'liquid-glass',
+    name: 'Liquid Glass',
+    isDark: false,
+    glass: true,
+    styles: {
+      // Soft pastel / vibrant liquid gradient base (light mode)
+      '--bg-app': 'linear-gradient(135deg, #7dd3fc 0%, #c4b5fd 35%, #f9a8d4 70%, #a5f3fc 100%)',
+      '--bg-surface': 'rgba(255, 255, 255, 0.12)',
+      '--bg-muted': 'rgba(255, 255, 255, 0.08)',
+      '--text-main': '#1e293b',
+      '--text-muted': '#475569',
+      '--text-bright': '#0f172a',
+      '--border-main': 'rgba(255, 255, 255, 0.25)',
+      '--accent-main': '#0a84ff',
+      '--accent-hover': '#0071e3',
+      '--accent-cyan': '#22d3ee',
+      '--accent-purple': '#bf5af2',
+      '--accent-yellow': '#f59e0b',
+      '--accent-red': '#ff453a',
+      '--font-family': 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      // Glass-specific tokens consumed by CSS
+      '--glass-blur': 'blur(24px) saturate(180%)',
+      '--glass-bg': 'rgba(255, 255, 255, 0.12)',
+      '--glass-bg-strong': 'rgba(255, 255, 255, 0.2)',
+      '--glass-border': 'rgba(255, 255, 255, 0.25)',
+      '--glass-highlight': 'rgba(255, 255, 255, 0.5)',
+      '--glass-shadow': '0 8px 32px rgba(0, 0, 0, 0.12)',
+    }
   }
 };
 
@@ -196,8 +229,16 @@ export function applyTheme(themeId: ThemeId) {
     root.classList.remove('dark');
   }
 
+  // Liquid Glass: enable glass variant (also remove legacy solid bg)
+  if (theme.glass) {
+    root.classList.add('glass-theme');
+    root.style.background = theme.styles['--bg-app'];
+  } else {
+    root.classList.remove('glass-theme');
+    root.style.background = '';
+  }
+
   Object.entries(theme.styles).forEach(([prop, val]) => {
     root.style.setProperty(prop, val);
   });
 }
-

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { useTermFlowStore } from '@/lib/store';
 
 interface GraphViewProps {
@@ -113,10 +114,10 @@ export default function GraphView({ onSelectTask }: GraphViewProps) {
           <p className="text-xs text-[var(--text-muted)]">Klik node untuk membuka detail task, atau fokus ke satu dependency chain.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setZoom((value) => Number(Math.max(0.7, value - 0.1).toFixed(1)))} className="terminal-button">−</button>
+          <button type="button" onClick={() => setZoom((value) => Number(Math.max(0.7, value - 0.1).toFixed(1)))} className="terminal-button"><ZoomOut size={14} aria-hidden /></button>
           <span className="min-w-12 text-center text-[10px] text-[var(--text-muted)]">{zoom.toFixed(1)}x</span>
-          <button type="button" onClick={() => setZoom((value) => Number(Math.min(1.8, value + 0.1).toFixed(1)))} className="terminal-button">+</button>
-          <button type="button" onClick={() => { setZoom(1); setFocusTaskId(selectedTaskId || visibleTasks[0]?.id || null); }} className="terminal-button">Fit</button>
+          <button type="button" onClick={() => setZoom((value) => Number(Math.min(1.8, value + 0.1).toFixed(1)))} className="terminal-button"><ZoomIn size={14} aria-hidden /></button>
+          <button type="button" onClick={() => { setZoom(1); setFocusTaskId(selectedTaskId || visibleTasks[0]?.id || null); }} className="terminal-button"><Maximize2 size={14} aria-hidden /> Fit</button>
         </div>
       </div>
       {visibleTasks.length === 0 ? (

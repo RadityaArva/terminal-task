@@ -1,6 +1,7 @@
 'use client';
 
 import { useTermFlowStore } from '@/lib/store';
+import { Rocket, AlertTriangle } from 'lucide-react';
 
 export default function MissionControlView({ onSelectTask }: { onSelectTask: (id: string) => void }) {
   const { tasks, projects } = useTermFlowStore();

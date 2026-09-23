@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useTermFlowStore } from '@/lib/store';
+import { CalendarCheck, X } from 'lucide-react';
 
 const toDateKey = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -48,7 +49,7 @@ export default function WeeklyReviewModal({ isOpen, onClose }: WeeklyReviewModal
             <div className="font-bold text-[var(--accent-cyan)]">&gt; review week</div>
             <div className="mt-1 text-[10px] text-[var(--text-muted)]">{weekStartKey} → {weekEndKey}</div>
           </div>
-          <button type="button" onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-bright)]" aria-label="Tutup weekly review">✕</button>
+          <button type="button" onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-bright)]" aria-label="Tutup weekly review"><X size={16} strokeWidth={1.75} aria-hidden /></button>
         </header>
         <div className="max-h-[75vh] space-y-4 overflow-y-auto p-4 text-xs">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">

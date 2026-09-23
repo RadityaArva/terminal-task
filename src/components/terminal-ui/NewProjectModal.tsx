@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import { useTermFlowStore } from '@/lib/store';
+import { Save, Plus, X } from 'lucide-react';
 
 type Role = 'Owner' | 'Admin' | 'Member' | 'Viewer';
 type AccessRow = { username: string; role: Role };

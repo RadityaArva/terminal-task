@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Task, TaskPriority, useTermFlowStore } from '@/lib/store';
 import { getTranslation } from '@/lib/i18n';
 import RiskRadarBadge from './RiskRadarBadge';
+import { Trash2, Zap, Calendar, GitBranch, User, Tag } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
@@ -49,8 +50,9 @@ function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps) {
           <span className={`px-1.5 py-0.5 rounded border text-[10px] uppercase font-bold ${priorityColors[task.priority]}`}>
             {getTranslation(`priority.${task.priority}`, lang)}
           </span>
-          <span title={`Energy: ${task.energyLevel || 'medium'}`} className="rounded border border-[var(--accent-purple)]/50 px-1.5 py-0.5 text-[10px] text-[var(--accent-purple)]">
-            {task.energyLevel === 'high' ? '⚡' : task.energyLevel === 'low' ? '▱' : '▰'} {task.energyLevel || 'medium'}
+          <span title={`Energy: ${task.energyLevel || 'medium'}`} className="inline-flex items-center gap-1 rounded border border-[var(--accent-purple)]/50 px-1.5 py-0.5 text-[10px] text-[var(--accent-purple)]">
+            <Zap size={10} strokeWidth={2} aria-hidden />
+            <span>{task.energyLevel || 'medium'}</span>
           </span>
           {onDelete && (
             <button
@@ -61,9 +63,9 @@ function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps) {
                 event.stopPropagation();
                 onDelete();
               }}
-              className="rounded border border-transparent px-1.5 py-0.5 text-[10px] text-[var(--text-muted)] transition hover:border-[var(--accent-red)]/60 hover:bg-[var(--accent-red)]/10 hover:text-[var(--accent-red)]"
+              className="inline-flex h-5 w-5 items-center justify-center rounded border border-transparent text-[var(--text-muted)] transition hover:border-[var(--accent-red)]/60 hover:bg-[var(--accent-red)]/10 hover:text-[var(--accent-red)]"
             >
-              ×
+              <Trash2 size={11} strokeWidth={1.75} aria-hidden />
             </button>
           )}
         </div>
@@ -88,9 +90,10 @@ function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps) {
           {task.labels.map((label, idx) => (
             <span
               key={idx}
-              className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-app)] border border-[var(--border-main)] text-[var(--text-muted)]"
+              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-app)] border border-[var(--border-main)] text-[var(--text-muted)]"
             >
-              #{label}
+              <Tag size={9} strokeWidth={1.75} aria-hidden />
+              <span>#{label}</span>
             </span>
           ))}
         </div>
@@ -105,18 +108,23 @@ function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps) {
             </span>
           )}
           {task.dueDate && (
-            <span>📅 {task.dueDate}</span>
+            <span className="inline-flex items-center gap-1">
+              <Calendar size={11} strokeWidth={1.75} aria-hidden />
+              <span>{task.dueDate}</span>
+            </span>
           )}
         </div>
 
         <div className="flex items-center space-x-1">
           {task.githubPr && (
-            <span className="text-[var(--accent-cyan)]" title={`PR #${task.githubPr.number}`}>
-              🔗 #{task.githubPr.number}
+            <span className="inline-flex items-center gap-1 text-[var(--accent-cyan)]" title={`PR #${task.githubPr.number}`}>
+              <GitBranch size={11} strokeWidth={1.75} aria-hidden />
+              <span>#{task.githubPr.number}</span>
             </span>
           )}
-          <span className="text-[var(--accent-purple)] font-bold">
-            @{task.assignee}
+          <span className="inline-flex items-center gap-1 text-[var(--accent-purple)] font-bold">
+            <User size={10} strokeWidth={1.75} aria-hidden />
+            <span>@{task.assignee}</span>
           </span>
         </div>
       </div>
