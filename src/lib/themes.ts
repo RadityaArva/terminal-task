@@ -190,36 +190,37 @@ export const THEMES: Record<ThemeId, ThemeConfig> = {
   'liquid-glass': {
     id: 'liquid-glass',
     name: 'Liquid Glass',
-    isDark: false,
+    isDark: true,
     glass: true,
     styles: {
-      // Soft pastel / vibrant liquid gradient base (light mode)
-      '--bg-app': 'linear-gradient(135deg, #7dd3fc 0%, #c4b5fd 35%, #f9a8d4 70%, #a5f3fc 100%)',
-      '--bg-surface': 'rgba(255, 255, 255, 0.12)',
-      '--bg-muted': 'rgba(255, 255, 255, 0.08)',
-      '--text-main': '#1e293b',
-      '--text-muted': '#475569',
-      '--text-bright': '#0f172a',
-      '--border-main': 'rgba(255, 255, 255, 0.25)',
-      '--accent-main': '#0a84ff',
-      '--accent-hover': '#0071e3',
-      '--accent-cyan': '#22d3ee',
-      '--accent-purple': '#bf5af2',
-      '--accent-yellow': '#f59e0b',
-      '--accent-red': '#ff453a',
+      // Pure Neutral Glass tokens — no garish accent colors, pure transparency on user background
+      '--bg-app': 'transparent',
+      '--bg-surface': 'rgba(255, 255, 255, 0.08)',
+      '--bg-muted': 'rgba(255, 255, 255, 0.05)',
+      '--text-main': 'rgba(255, 255, 255, 0.88)',
+      '--text-muted': 'rgba(255, 255, 255, 0.55)',
+      '--text-bright': '#ffffff',
+      '--border-main': 'rgba(255, 255, 255, 0.15)',
+      // Netral, no colorful tints
+      '--accent-main': 'rgba(255, 255, 255, 0.95)',
+      '--accent-hover': '#ffffff',
+      '--accent-cyan': 'rgba(255, 255, 255, 0.85)',
+      '--accent-purple': 'rgba(255, 255, 255, 0.75)',
+      '--accent-yellow': 'rgba(255, 255, 255, 0.9)',
+      '--accent-red': 'rgba(255, 120, 120, 0.85)',
       '--font-family': 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-      // Glass-specific tokens consumed by CSS
-      '--glass-blur': 'blur(24px) saturate(180%)',
-      '--glass-bg': 'rgba(255, 255, 255, 0.12)',
-      '--glass-bg-strong': 'rgba(255, 255, 255, 0.2)',
-      '--glass-border': 'rgba(255, 255, 255, 0.25)',
-      '--glass-highlight': 'rgba(255, 255, 255, 0.5)',
-      '--glass-shadow': '0 8px 32px rgba(0, 0, 0, 0.12)',
+      // Glass-specific tokens
+      '--glass-blur': 'blur(24px) saturate(150%)',
+      '--glass-bg': 'rgba(255, 255, 255, 0.08)',
+      '--glass-bg-strong': 'rgba(255, 255, 255, 0.18)',
+      '--glass-border': 'rgba(255, 255, 255, 0.15)',
+      '--glass-highlight': 'rgba(255, 255, 255, 0.25)',
+      '--glass-shadow': '0 8px 32px rgba(0, 0, 0, 0.2)',
     }
   }
 };
 
-export function applyTheme(themeId: ThemeId) {
+export function applyTheme(themeId: ThemeId, customBg?: string, customImg?: string) {
   const theme = THEMES[themeId] || THEMES['github-dark'];
   const root = document.documentElement;
 
@@ -229,13 +230,20 @@ export function applyTheme(themeId: ThemeId) {
     root.classList.remove('dark');
   }
 
-  // Liquid Glass: enable glass variant (also remove legacy solid bg)
   if (theme.glass) {
     root.classList.add('glass-theme');
-    root.style.background = theme.styles['--bg-app'];
+    // Read user background preference or fallback
+    const bgVal = customBg || '#0f172a';
+    if (customImg) {
+      root.style.setProperty('--glass-custom-bg', `url("${customImg}") center / cover no-repeat fixed`);
+    } else {
+      root.style.setProperty('--glass-custom-bg', bgVal);
+    }
+    root.style.background = customImg ? `url("${customImg}") center / cover no-repeat fixed` : bgVal;
   } else {
     root.classList.remove('glass-theme');
     root.style.background = '';
+    root.style.removeProperty('--glass-custom-bg');
   }
 
   Object.entries(theme.styles).forEach(([prop, val]) => {

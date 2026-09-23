@@ -35,6 +35,8 @@ export default function Home() {
     viewMode,
     setViewMode,
     themeId,
+    glassCustomBg,
+    glassCustomImage,
     tasks,
     activeProjectId,
     selectedTaskId,
@@ -218,8 +220,8 @@ export default function Home() {
   }, [viewMode, setViewMode]);
 
   useEffect(() => {
-    applyTheme(themeId);
-  }, [themeId]);
+    applyTheme(themeId, glassCustomBg, glassCustomImage);
+  }, [themeId, glassCustomBg, glassCustomImage]);
 
   useEffect(() => {
     purgeExpiredTasks();
@@ -361,7 +363,7 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         exit={shouldReduceMotion ? undefined : { opacity: 0, y: -3 }}
         transition={{ duration: shouldReduceMotion ? 0 : 0.22, ease: [0.22, 0.8, 0.24, 1] }}
-        className="terminal-main flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 space-y-6"
+        className="terminal-main flex-1 w-full max-w-7xl mx-auto p-4 pb-12 sm:p-6 sm:pb-10 space-y-6"
       >
         {viewMode === 'board' && (
           <BoardView
@@ -401,12 +403,13 @@ export default function Home() {
       </AnimatePresence>
 
       {/* Footer */}
-      <footer className="border-t border-[var(--border-main)]/50 bg-[var(--bg-surface)] p-4 text-center text-xs text-[var(--text-muted)]">
+      <footer className="border-t border-[var(--border-main)]/50 bg-[var(--bg-surface)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] text-center text-xs text-[var(--text-muted)] supports-[padding:max(0px)]:pb-[max(1rem,env(safe-area-inset-bottom))]">
         <p>© 2026 TermFlow — Terminal-First Task & Project Management</p>
         <p className="mt-1 text-[10px]">
           Press <kbd className="border border-[var(--border-main)] px-1 rounded text-[var(--accent-cyan)]">Ctrl+K</kbd> for command palette | Press <kbd className="border border-[var(--border-main)] px-1 rounded text-[var(--accent-yellow)]">?</kbd> for shortcuts cheatsheet
         </p>
       </footer>
+      <div className="h-7 shrink-0 sm:h-7" aria-hidden />
       <GlobalStatusBar />
 
       {/* Command Palette Modal */}

@@ -65,6 +65,17 @@ export interface ProjectNote {
   updatedAt: string;
 }
 
+export interface EbookSource {
+  id: string;
+  title: string;
+  type: 'pdf' | 'link';
+  url: string; // url or data URL / file name
+  fileName?: string;
+  description?: string;
+  tags: string[];
+  createdAt: string;
+}
+
 export interface Note {
   id: string;
   title: string;
@@ -130,6 +141,10 @@ interface TermFlowState {
   searchFilter: string;
   projectNotes: Record<string, ProjectNote[]>;
   notes: Note[];
+  ebooks: EbookSource[];
+  addEbook: (item: Omit<EbookSource, 'id' | 'createdAt'>) => string;
+  deleteEbook: (id: string) => void;
+
   
   // CLI & History
   commandHistory: string[];
@@ -141,6 +156,10 @@ interface TermFlowState {
   password: string;
   isAuthenticated: boolean;
   notificationSettings: NotificationSettings;
+  glassCustomBg: string;
+  glassCustomImage: string;
+  setGlassBackground: (bg: string, img?: string) => void;
+
   
   // Zen Mode Pomodoro
   zenTaskId: string | null;
@@ -332,6 +351,27 @@ export const useTermFlowStore = create<TermFlowState>()(
       searchFilter: '',
       projectNotes: {},
       notes: [],
+      ebooks: [
+        {
+          id: 'eb-1',
+          title: 'The Pragmatic Programmer (Summary & Notes)',
+          type: 'pdf',
+          url: '#',
+          fileName: 'pragmatic-programmer-summary.pdf',
+          description: 'Catatan penting seputar software craftsmanship dan mindset developer.',
+          tags: ['programming', 'craft'],
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: 'eb-2',
+          title: 'Linux CLI Cheat Sheet & System Commands',
+          type: 'link',
+          url: 'https://cheat.sh/',
+          description: 'Repositori interaktif perintah Linux & tools terminal modern.',
+          tags: ['cli', 'linux'],
+          createdAt: new Date().toISOString()
+        }
+      ],
       
       commandHistory: ['theme dracula', 'view board', 'new task "Design UI" #ui'],
       activityLogs: initialLogs,
@@ -340,6 +380,8 @@ export const useTermFlowStore = create<TermFlowState>()(
       password: 'termflow123',
       isAuthenticated: false,
       notificationSettings: { enabled: true, reminderMinutes: 60 },
+      glassCustomBg: '#0f172a',
+      glassCustomImage: '',
       
       zenTaskId: 'TF-2',
       pomodoroMinutes: 25,
@@ -351,7 +393,7 @@ export const useTermFlowStore = create<TermFlowState>()(
       focusStartedAt: null,
 
       setThemeId: (themeId) => {
-        applyTheme(themeId);
+        applyTheme(themeId, get().glassCustomBg, get().glassCustomImage);
         set({ themeId });
       },
 
@@ -411,6 +453,15 @@ export const useTermFlowStore = create<TermFlowState>()(
       })),
       deleteNote: (id) => set((state) => ({ notes: state.notes.filter((note) => note.id !== id) })),
       openNote: (id) => set((state) => ({ notes: state.notes.map((note) => note.id === id ? { ...note, lastOpenedAt: new Date().toISOString() } : note) })),
+      addEbook: (item) => {
+        const id = `ebook-${Date.now()}`;
+        const now = new Date().toISOString();
+        const newEbook: EbookSource = { ...item, id, createdAt: now };
+        set((state) => ({ ebooks: [newEbook, ...state.ebooks] }));
+        return id;
+      },
+      deleteEbook: (id) => set((state) => ({ ebooks: state.ebooks.filter((eb) => eb.id !== id) })),
+      setGlassBackground: (bg, img = '') => set({ glassCustomBg: bg, glassCustomImage: img }),
       updateProfile: (updates) => set((state) => ({ profile: { ...state.profile, ...updates } })),
       setPassword: (password) => set({ password }),
       login: (password) => {
@@ -733,9 +784,12 @@ export const useTermFlowStore = create<TermFlowState>()(
         profile: state.profile,
         projectNotes: state.projectNotes,
         notes: state.notes,
+        ebooks: state.ebooks,
         password: state.password,
         isAuthenticated: state.isAuthenticated,
         notificationSettings: state.notificationSettings,
+        glassCustomBg: state.glassCustomBg,
+        glassCustomImage: state.glassCustomImage,
         focusSessions: state.focusSessions
       })
     }

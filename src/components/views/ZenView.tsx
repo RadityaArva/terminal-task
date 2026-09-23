@@ -1,7 +1,7 @@
 'use client';
 
 import { useTermFlowStore } from '@/lib/store';
-import { Sparkles, Play, Pause, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, X, Sparkles, CheckCircle2, ListTodo } from 'lucide-react';
 
 export default function ZenView() {
   const {
@@ -16,7 +16,8 @@ export default function ZenView() {
     startFocus,
     stopFocus,
     resetPomodoro,
-    toggleSubtask
+    toggleSubtask,
+    setViewMode,
   } = useTermFlowStore();
 
   const projectTasks = tasks.filter((t) => t.projectId === activeProjectId);
@@ -26,23 +27,39 @@ export default function ZenView() {
   const formattedSec = String(pomodoroSeconds).padStart(2, '0');
 
   return (
-    <div className="max-w-2xl mx-auto font-mono space-y-6 animate-in fade-in duration-200">
-      {/* Zen Header Card */}
-      <div className="bg-[var(--bg-surface)] border-2 border-[var(--border-main)] rounded-lg p-6 shadow-xl text-center space-y-4">
-        <div className="flex items-center justify-between text-xs text-[var(--text-muted)] pb-2 border-b border-[var(--border-main)]">
-          <span className="text-[var(--accent-purple)] font-bold">🧘 ZEN FOCUS MODE</span>
-          <span className="uppercase text-[var(--accent-cyan)] font-bold">
-            {pomodoroMode === 'work' ? '🔥 Focus Session' : '☕ Rest Break'}
-          </span>
+    <div className="relative mx-auto flex w-full max-w-2xl flex-col gap-4 font-mono sm:gap-6">
+      {/* Exit Button — always visible, prominent in the top corner */}
+      <div className="flex items-center justify-between border-b border-[var(--border-main)]/60 bg-[var(--bg-surface)]/60 px-3 py-2 rounded-lg">
+        <div className="flex items-center gap-2 text-xs font-bold text-[var(--accent-purple)]">
+          <Sparkles size={14} strokeWidth={1.75} aria-hidden />
+          <span>ZEN / FOCUS MODE</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setViewMode('board')}
+          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-md border border-[var(--border-main)] bg-[var(--bg-app)] px-3 py-1.5 text-xs font-bold text-[var(--text-bright)] transition hover:border-[var(--accent-red)]/60 hover:text-[var(--accent-red)]"
+          aria-label="Keluar dari Zen Mode"
+          title="Kembali ke Board"
+        >
+          <X size={14} strokeWidth={2} aria-hidden />
+          <span>Keluar (Exit)</span>
+        </button>
+      </div>
+
+      {/* Main Focus Card — perfectly centered timer & controls, fit in viewport */}
+      <div className="terminal-panel flex flex-col items-center justify-center p-5 text-center sm:p-8">
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--border-main)] bg-[var(--bg-app)] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-[var(--accent-cyan)]">
+          <span className={`h-2 w-2 rounded-full ${isPomodoroRunning ? 'animate-pulse bg-[var(--accent-main)]' : 'bg-[var(--accent-yellow)]'}`} aria-hidden />
+          {pomodoroMode === 'work' ? '🔥 Focus Session' : '☕ Rest Break'}
         </div>
 
-        {/* Task Selector */}
-        <div className="space-y-1">
-          <label className="text-[11px] text-[var(--text-muted)] block">FOCUS TASK TARGET</label>
+        {/* Task target selector */}
+        <div className="mt-2 w-full max-w-md">
+          <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Target Task</label>
           <select
             value={activeTask?.id || ''}
             onChange={(e) => setZenTask(e.target.value)}
-            className="w-full max-w-md bg-[var(--bg-app)] border border-[var(--border-main)] text-[var(--accent-cyan)] font-bold rounded px-3 py-2 text-sm focus:outline-none focus:border-[var(--accent-cyan)] text-center"
+            className="terminal-input w-full py-2 text-center text-xs font-bold text-[var(--accent-cyan)] sm:text-sm"
           >
             {projectTasks.map((t) => (
               <option key={t.id} value={t.id}>
@@ -52,78 +69,94 @@ export default function ZenView() {
           </select>
         </div>
 
-        {/* Large Pomodoro Timer Display */}
-        <div className="py-6">
-          <div className="text-6xl sm:text-7xl font-bold tracking-widest text-[var(--accent-main)] font-mono drop-shadow-md">
+        {/* Big centered Timer display — proportional, readable from arm's length */}
+        <div className="my-5 flex flex-col items-center justify-center sm:my-8">
+          <div className="font-mono text-6xl font-black tracking-widest text-[var(--accent-main)] drop-shadow-lg sm:text-7xl md:text-8xl">
             {formattedMin}:{formattedSec}
           </div>
-          <p className="text-xs text-[var(--text-muted)] mt-2">
-            {isPomodoroRunning ? 'Timer ticking... Stay focused!' : 'Timer paused. Ready to work?'}
+          <p className="mt-2 text-xs text-[var(--text-muted)] sm:text-sm">
+            {isPomodoroRunning ? 'Timer berjalan... Tetap fokus pada task ini.' : 'Timer dijeda. Siap untuk mulai?'}
           </p>
         </div>
 
-        {/* Timer Control Buttons */}
-        <div className="flex justify-center space-x-3 pt-2">
+        {/* Controls row — Play/Pause + Reset with consistent icons & touch target */}
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <button
+            type="button"
             onClick={() => {
               if (isPomodoroRunning) stopFocus();
               else if (activeTask) startFocus(activeTask.id, 25);
             }}
-            className={`px-6 py-2.5 rounded font-bold text-sm text-[var(--bg-app)] transition-all shadow-md ${
+            className={`inline-flex min-h-[44px] min-w-[140px] items-center justify-center gap-2 rounded-lg px-6 py-3 text-xs font-bold text-[var(--bg-app)] shadow-lg transition sm:text-sm ${
               isPomodoroRunning
                 ? 'bg-[var(--accent-yellow)] hover:opacity-90'
                 : 'bg-[var(--accent-main)] hover:bg-[var(--accent-hover)]'
             }`}
           >
-            {isPomodoroRunning ? '⏸ <Pause size={14} className="mr-1.5 inline" aria-hidden /> Jeda / Pause' : '▶ <Play size={14} className="mr-1.5 inline" aria-hidden /> Mulai Focus'}
+            {isPomodoroRunning ? (
+              <>
+                <Pause size={16} strokeWidth={2} aria-hidden />
+                <span>Jeda / Pause</span>
+              </>
+            ) : (
+              <>
+                <Play size={16} strokeWidth={2} aria-hidden />
+                <span>Mulai Fokus</span>
+              </>
+            )}
           </button>
           <button
+            type="button"
             onClick={() => {
               if (isPomodoroRunning) stopFocus();
               resetPomodoro();
             }}
-            className="px-4 py-2.5 rounded bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-bright)] border border-[var(--border-main)] font-bold text-sm transition-colors"
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-[var(--border-main)] bg-[var(--bg-app)] px-4 py-3 text-xs font-bold text-[var(--text-muted)] transition hover:border-[var(--accent-cyan)] hover:text-[var(--text-bright)] sm:text-sm"
           >
-            🔄 <RotateCcw size={14} className="mr-1.5 inline" aria-hidden /> Reset
+            <RotateCcw size={15} strokeWidth={2} aria-hidden />
+            <span>Reset</span>
           </button>
         </div>
       </div>
 
-      {/* Active Task Checklist Focus */}
+      {/* Task Checklist card */}
       {activeTask && (
-        <div className="bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-lg p-5 shadow-md space-y-3">
-          <h4 className="font-bold text-sm text-[var(--text-bright)] flex items-center justify-between">
-            <span>TASK CHECKLIST: {activeTask.title}</span>
-            <span className="text-xs text-[var(--accent-purple)]">[{activeTask.id}]</span>
-          </h4>
+        <div className="terminal-panel space-y-3 p-4 sm:p-5">
+          <div className="flex items-center justify-between border-b border-[var(--border-main)]/60 pb-2">
+            <h3 className="flex items-center gap-2 text-xs font-bold text-[var(--text-bright)]">
+              <ListTodo size={14} strokeWidth={1.75} className="text-[var(--accent-cyan)]" aria-hidden />
+              <span>Checklist: {activeTask.title}</span>
+            </h3>
+            <span className="font-mono text-xs font-bold text-[var(--accent-purple)]">[{activeTask.id}]</span>
+          </div>
 
           {activeTask.description && (
-            <p className="text-xs text-[var(--text-muted)] bg-[var(--bg-app)] p-3 rounded border border-[var(--border-main)]/50">
+            <p className="rounded border border-[var(--border-main)]/40 bg-[var(--bg-app)] p-2.5 text-xs text-[var(--text-muted)]">
               {activeTask.description}
             </p>
           )}
 
-          <div className="space-y-2 pt-1 text-xs">
+          <div className="space-y-1.5 text-xs">
             {activeTask.subtasks.map((st) => (
               <label
                 key={st.id}
-                className="flex items-center space-x-3 p-2 rounded bg-[var(--bg-app)] border border-[var(--border-main)] cursor-pointer hover:border-[var(--accent-cyan)] transition-colors"
+                className="flex min-h-[40px] cursor-pointer items-center gap-3 rounded border border-[var(--border-main)]/50 bg-[var(--bg-app)] p-2.5 transition hover:border-[var(--accent-cyan)]/40"
               >
                 <input
                   type="checkbox"
                   checked={st.completed}
                   onChange={() => toggleSubtask(activeTask.id, st.id)}
-                  className="accent-[var(--accent-main)] w-4 h-4"
+                  className="h-4 w-4 accent-[var(--accent-main)]"
                 />
-                <span className={`${st.completed ? 'line-through text-[var(--text-muted)]' : 'text-[var(--text-bright)] font-semibold'}`}>
+                <span className={st.completed ? 'text-[var(--text-muted)] line-through' : 'font-semibold text-[var(--text-bright)]'}>
                   {st.title}
                 </span>
               </label>
             ))}
 
             {activeTask.subtasks.length === 0 && (
-              <div className="text-xs text-[var(--text-muted)] text-center py-3">
-                No checklist subtasks. Focus on the main title task above!
+              <div className="py-3 text-center text-xs text-[var(--text-muted)]">
+                Belum ada subtask checklist. Fokus pada task utama di atas!
               </div>
             )}
           </div>

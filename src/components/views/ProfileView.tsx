@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useState } from 'react';
 import { SquarePen, Settings, LogOut, ImagePlus } from 'lucide-react';
 import { useTermFlowStore, UserProfile } from '@/lib/store';
 import { getTranslation } from '@/lib/i18n';
+import ActivityTimeline from '@/components/terminal-ui/ActivityTimeline';
 
 export default function ProfileView() {
   const store = useTermFlowStore();
@@ -64,7 +65,8 @@ export default function ProfileView() {
         {notes.length === 0 ? <p className="text-xs text-[var(--text-muted)]">Belum ada catatan tersimpan.</p> : <div className="grid gap-3 sm:grid-cols-2">{notes.map((note) => <article key={note.id} className="rounded border border-[var(--border-main)] bg-[var(--bg-app)] p-3"><h4 className="font-bold text-[var(--accent-cyan)]">{note.name}</h4><p className="mt-2 line-clamp-4 whitespace-pre-wrap text-xs leading-5 text-[var(--text-main)]">{note.content}</p></article>)}</div>}
       </section>
 
-      <section className="terminal-panel space-y-3 p-5 text-xs"><h3 className="font-bold text-[var(--accent-purple)]">📜 {getTranslation('profile.activityLog', lang)}</h3><div className="max-h-60 space-y-2 overflow-y-auto rounded border border-[var(--border-main)] bg-[var(--bg-app)] p-3">{activityLogs.map((log) => <div key={log.id} className="flex flex-wrap gap-2 text-[11px]"><span className="text-[var(--accent-yellow)]">[{log.timestamp}]</span><span className="text-[var(--accent-cyan)]">commit {log.commitHash}</span><span>{log.message}</span></div>)}</div></section>
+      <section className="terminal-panel space-y-0 overflow-hidden p-0 text-xs">
+        <div className="flex items-center justify-between border-b border-[var(--border-main)] bg-[var(--bg-surface)]/60 px-4 py-3"><h3 className="font-bold text-[var(--accent-purple)]">📜 {getTranslation('profile.activityLog', lang)}</h3><span className="rounded-full border border-[var(--border-main)] bg-[var(--bg-app)] px-2 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">{activityLogs.length} events</span></div><div className="max-h-[420px] overflow-y-auto px-3 py-2"><ActivityTimeline logs={activityLogs} /></div></section>
 
       {modal === 'profile' && <ProfileModal profile={profile} onClose={() => setModal(null)} onSave={(updates) => { store.updateProfile(updates); setModal(null); }} />}
       {modal === 'settings' && <SettingsModal onClose={() => setModal(null)} />}

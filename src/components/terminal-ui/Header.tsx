@@ -23,6 +23,7 @@ import {
   Terminal,
   Keyboard,
   X,
+  LogOut,
 } from 'lucide-react';
 import { useTermFlowStore, ViewMode } from '@/lib/store';
 import { THEMES, ThemeId } from '@/lib/themes';
@@ -110,6 +111,9 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
     setViewMode,
     themeId,
     setThemeId,
+    glassCustomBg,
+    glassCustomImage,
+    setGlassBackground,
     lang,
     setLang,
     tasks,
@@ -433,6 +437,60 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                       ))}
                     </div>
                   </div>
+                  {themeId === 'liquid-glass' && (
+                    <div className="mt-3 space-y-2 rounded-lg border border-[var(--border-main)]/40 bg-[var(--bg-app)] p-2">
+                      <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Liquid Glass — Latar kaca</span>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={/^#[0-9A-Fa-f]{6}$/.test(glassCustomBg || '') ? glassCustomBg : '#0f172a'}
+                          onChange={(e) => setGlassBackground(e.target.value, '')}
+                          className="h-8 w-8 shrink-0 rounded border border-[var(--border-main)] bg-transparent p-0.5"
+                          title="Pilih warna solid"
+                          aria-label="Pilih warna background"
+                        />
+                        <input
+                          value={glassCustomImage ? '' : glassCustomBg}
+                          onChange={(e) => setGlassBackground(e.target.value, '')}
+                          placeholder="#0f172a / warna"
+                          className="terminal-input flex-1 py-1.5 text-xs"
+                        />
+                      </div>
+                      <label className="flex cursor-pointer items-center gap-2 rounded border border-dashed border-[var(--border-main)] bg-[var(--bg-surface)] px-2 py-1.5 text-xs text-[var(--text-muted)] hover:border-[var(--accent-cyan)]/40 hover:text-[var(--accent-cyan)]">
+                        <span className="font-bold">🖼 Gambar</span>
+                        <span className="truncate text-[10px]">{glassCustomImage ? glassCustomImage.slice(0, 28) + '…' : 'Upload / pakai URL sebagai latar'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (!f) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const res = reader.result;
+                              if (typeof res === 'string') setGlassBackground('', res);
+                            };
+                            reader.readAsDataURL(f);
+                          }}
+                        />
+                      </label>
+                      <input
+                        value={glassCustomImage}
+                        onChange={(e) => setGlassBackground('', e.target.value)}
+                        placeholder="https://... (URL gambar)"
+                        className="terminal-input py-1.5 text-xs"
+                      />
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => setGlassBackground('', '')} className="terminal-button flex-1 py-1 text-[11px]">
+                          Hapus gambar
+                        </button>
+                        <button type="button" onClick={() => setGlassBackground('#0f172a', '')} className="terminal-button flex-1 py-1 text-[11px]">
+                          Reset warna
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <button
                     onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
                     className="menu-item mt-2 flex w-full items-center gap-2"
@@ -467,18 +525,19 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 4, scale: 0.98 }}
                   transition={{ duration: 0.16 }}
-                  className="absolute right-0 top-[calc(100%+10px)] z-50 w-48 overflow-hidden rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-1.5 shadow-2xl"
+                  className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+56px)] z-50 overflow-hidden rounded-2xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-2 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-[calc(100%+10px)] sm:w-52 sm:rounded-xl sm:p-1.5"
                 >
+                  <div className="mx-auto mb-2 h-1 w-8 rounded-full bg-[var(--border-main)]/40 sm:hidden" aria-hidden />
                   <div className="px-3 py-2">
                     <div className="truncate text-xs font-bold text-[var(--text-bright)]">{profile.username}</div>
                     <div className="truncate text-[11px] text-[var(--text-muted)]">{profile.role || 'Member'}</div>
                   </div>
                   <div className="my-1 border-t border-[var(--border-main)]/60" />
-                  <button onClick={() => setViewMode('profile')} className="menu-item flex w-full items-center gap-2">
+                  <button onClick={() => setViewMode('profile')} className="menu-item flex w-full min-h-[44px] items-center gap-2.5 py-2.5">
                     <User size={16} strokeWidth={1.75} className="shrink-0" aria-hidden /> Profile
                   </button>
-                  <button onClick={logout} className="menu-item flex w-full items-center gap-2 text-[var(--accent-red)] hover:bg-[var(--accent-red)]/10">
-                    <X size={16} strokeWidth={1.75} className="shrink-0" aria-hidden /> Logout
+                  <button onClick={logout} className="menu-item flex w-full min-h-[44px] items-center gap-2.5 py-2.5 text-[var(--accent-red)] hover:bg-[var(--accent-red)]/10">
+                    <LogOut size={16} strokeWidth={1.75} className="shrink-0" aria-hidden /> Logout
                   </button>
                 </motion.div>
               )}
