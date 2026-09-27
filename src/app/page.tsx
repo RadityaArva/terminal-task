@@ -20,6 +20,8 @@ import ZenView from '@/components/views/ZenView';
 import ProfileView from '@/components/views/ProfileView';
 import InboxView from '@/components/views/InboxView';
 import NotesDashboard from '@/components/views/NotesDashboard';
+import BoardSelectorView from '@/components/views/BoardSelectorView';
+import { DropdownProvider } from '@/lib/dropdownContext';
 
 import TaskDetailModal from '@/components/task/TaskDetailModal';
 import LoginGate from '@/components/auth/LoginGate';
@@ -47,7 +49,11 @@ export default function Home() {
     setLang,
     purgeExpiredTasks,
     isPomodoroRunning,
-    tickPomodoro
+    tickPomodoro,
+    boards,
+    activeBoardId,
+    setActiveBoardId,
+    addBoard,
   } = useTermFlowStore();
   const isAuthenticated = useTermFlowStore((state) => state.isAuthenticated);
 
@@ -66,7 +72,49 @@ export default function Home() {
   );
   const shouldReduceMotion = useReducedMotion();
 
+  // Migrate legacy data without boardId (persisted before Board feature)
+  useEffect(() => {
+    const st = useTermFlowStore.getState();
+    let needs = false;
+    const fallbackBoard = st.boards[0]?.id || 'board-1';
+    if (st.tasks.some((t: any) => !t.boardId) || st.projects.some((p: any) => !p.boardId) || st.notes.some((n: any) => !n.boardId) || st.ebooks.some((e: any) => !e.boardId)) {
+      needs = true;
+    }
+    if (needs) {
+      useTermFlowStore.setState((prev: any) => ({
+        tasks: prev.tasks.map((t: any) => t.boardId ? t : { ...t, boardId: prev.projects.find((p: any) => p.id === t.projectId)?.boardId || fallbackBoard }),
+        projects: prev.projects.map((p: any) => p.boardId ? p : { ...p, boardId: fallbackBoard }),
+        notes: prev.notes.map((n: any) => n.boardId ? n : { ...n, boardId: fallbackBoard }),
+        ebooks: prev.ebooks.map((e: any) => e.boardId ? e : { ...e, boardId: fallbackBoard }),
+      }));
+    }
+  }, []);
+
   const commands = useMemo(() => [
+    {
+      id: 'new-board',
+      label: 'New board',
+      description: 'Buat board/workspace baru yang terpisah',
+      shortcut: 'new board',
+      execute: () => {
+        const name = window.prompt('Nama board baru:');
+        if (name?.trim()) addBoard({ name: name.trim() });
+      }
+    },
+    {
+      id: 'switch-board',
+      label: 'Switch board',
+      description: 'Pindah ke board lain tanpa logout',
+      shortcut: 'switch board',
+      execute: () => setActiveBoardId(null)
+    },
+    ...boards.map((b) => ({
+      id: `open-board-${b.id}`,
+      label: `Open board ${b.name}`,
+      description: `Buka board ${b.name} — data terpisah`,
+      shortcut: `open board ${b.name.toLowerCase()}`,
+      execute: () => setActiveBoardId(b.id)
+    })),
     {
       id: 'start-focus',
       label: 'Start focus',
@@ -212,7 +260,7 @@ export default function Home() {
       description: 'Change the terminal color theme',
       execute: () => setThemeId(id)
     }))
-  ], [selectedTaskId, setLang, setSearchFilter, setThemeId, setViewMode]);
+  ], [selectedTaskId, setLang, setSearchFilter, setThemeId, setViewMode, boards, addBoard, setActiveBoardId]);
 
   useEffect(() => {
     // Reset a legacy persisted List view after it was removed.
@@ -235,8 +283,8 @@ export default function Home() {
     return () => window.clearInterval(interval);
   }, [isPomodoroRunning, tickPomodoro]);
 
-  // Project filtered tasks list for keyboard navigation
-  const projectTasks = tasks.filter((t) => t.projectId === activeProjectId);
+  // Project filtered tasks list for keyboard navigation (scoped to active board)
+  const projectTasks = tasks.filter((t) => t.boardId === (activeBoardId || t.boardId) && t.projectId === activeProjectId);
 
   // Global Keyboard Shortcuts (j/k, n, g p, g d, ?, Ctrl+K)
   useEffect(() => {
@@ -330,8 +378,24 @@ export default function Home() {
 
   if (!mounted) return null;
   if (!isAuthenticated) return <LoginGate />;
+  if (!activeBoardId) {
+    return (
+      <DropdownProvider>
+      <div className="terminal-app flex min-h-screen flex-col bg-[var(--bg-app)] font-mono text-[var(--text-main)] transition-colors duration-200">
+        <Header onOpenCommandPalette={() => setIsCmdPaletteOpen(true)} onOpenCheatsheet={() => setIsCheatsheetOpen(true)} />
+        <div className="flex-1 w-full"><BoardSelectorView /></div>
+        <footer className="border-t border-[var(--border-main)]/50 bg-[var(--bg-surface)] p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] text-center text-xs text-[var(--text-muted)]">
+          <p>© 2026 TermFlow — Terminal-First Task & Project Management</p>
+        </footer>
+        <CommandPalette commands={commands} isOpen={isCmdPaletteOpen} onClose={() => setIsCmdPaletteOpen(false)} />
+        <ShortcutCheatsheet isOpen={isCheatsheetOpen} onClose={() => setIsCheatsheetOpen(false)} />
+      </div>
+      </DropdownProvider>
+    );
+  }
 
   return (
+    <DropdownProvider>
     <div className="terminal-app min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] flex flex-col font-mono transition-colors duration-200">
       {/* App Header */}
       <Header
@@ -363,7 +427,7 @@ export default function Home() {
         animate={{ opacity: 1, y: 0 }}
         exit={shouldReduceMotion ? undefined : { opacity: 0, y: -3 }}
         transition={{ duration: shouldReduceMotion ? 0 : 0.22, ease: [0.22, 0.8, 0.24, 1] }}
-        className="terminal-main flex-1 w-full max-w-7xl mx-auto p-4 pb-12 sm:p-6 sm:pb-10 space-y-6"
+        className="terminal-main flex-1 w-full max-w-[1280px] mx-auto px-4 py-6 pb-12 sm:px-6 sm:py-8 sm:pb-12 lg:px-8 space-y-6"
       >
         {viewMode === 'board' && (
           <BoardView
@@ -436,5 +500,6 @@ export default function Home() {
       {reportPeriod && <StandupReportModal period={reportPeriod} onClose={() => setReportPeriod(null)} />}
       <NewProjectModal isOpen={isNewProjectOpen} onClose={() => setIsNewProjectOpen(false)} />
     </div>
+    </DropdownProvider>
   );
 }

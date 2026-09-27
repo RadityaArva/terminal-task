@@ -5,6 +5,10 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { useTermFlowStore, TaskStatus, TaskPriority, Task, EnergyLevel } from '@/lib/store';
 import { getTranslation } from '@/lib/i18n';
 import { Trash2, Save, X, ArrowLeft, Play, Square, Send, Plus, Zap, Clock } from 'lucide-react';
+import CustomSelect from '@/components/terminal-ui/CustomSelect';
+import CustomDatePicker from '@/components/terminal-ui/CustomDatePicker';
+import CustomTimePicker from '@/components/terminal-ui/CustomTimePicker';
+import Checkbox from '@/components/terminal-ui/Checkbox';
 
 interface TaskDetailModalProps {
   taskId: string | null;
@@ -43,8 +47,9 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
   const [energyLevel, setEnergyLevel] = useState<EnergyLevel>(task.energyLevel || 'medium');
   const [assignee, setAssignee] = useState(task.assignee);
   const [startDate, setStartDate] = useState(task.startDate || task.createdAt.slice(0, 10));
+  const [startTime, setStartTime] = useState(task.startTime || '09:00');
   const [endDate, setEndDate] = useState(task.endDate || task.dueDate);
-  const [dueTime, setDueTime] = useState(task.dueTime || '');
+  const [endTime, setEndTime] = useState(task.endTime || task.dueTime || '17:00');
   const [labelsStr, setLabelsStr] = useState(task.labels.join(', '));
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [newComment, setNewComment] = useState('');
@@ -63,9 +68,11 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
       energyLevel,
       assignee,
       startDate,
+      startTime,
       endDate,
+      endTime,
       dueDate: endDate,
-      dueTime,
+      dueTime: endTime,
       labels,
     });
     onClose();
@@ -163,8 +170,9 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="terminal-input resize-y text-xs leading-5"
+              className="terminal-input resize-none text-xs leading-5"
               placeholder={getTranslation('task.descPlaceholder', lang)}
+              style={{ resize: 'none' }}
             />
           </div>
 
@@ -172,30 +180,12 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <div>
               <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="terminal-input font-bold text-[var(--accent-cyan)]"
-              >
-                <option value="todo">To Do</option>
-                <option value="in_progress">In Progress</option>
-                <option value="review">In Review</option>
-                <option value="done">Done</option>
-              </select>
+              <CustomSelect value={status} onChange={(v) => setStatus(v as TaskStatus)} options={[{ value: 'todo', label: 'To Do' }, { value: 'in_progress', label: 'In Progress' }, { value: 'review', label: 'In Review' }, { value: 'done', label: 'Done' }]} ariaLabel="Status" triggerClassName="font-bold !text-[var(--accent-cyan)]" />
             </div>
 
             <div>
               <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Prioritas</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="terminal-input font-bold text-[var(--accent-yellow)]"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="urgent">Urgent</option>
-              </select>
+              <CustomSelect value={priority} onChange={(v) => setPriority(v as TaskPriority)} options={[{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }, { value: 'urgent', label: 'Urgent' }]} ariaLabel="Prioritas" triggerClassName="font-bold !text-[var(--accent-yellow)]" />
             </div>
 
             <div>
@@ -210,46 +200,26 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
 
             <div>
               <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Energy</label>
-              <select
-                value={energyLevel}
-                onChange={(e) => setEnergyLevel(e.target.value as EnergyLevel)}
-                className="terminal-input font-bold text-[var(--accent-purple)]"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
+              <CustomSelect value={energyLevel} onChange={(v) => setEnergyLevel(v as EnergyLevel)} options={[{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }]} ariaLabel="Energy" triggerClassName="font-bold !text-[var(--accent-purple)]" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Date Range</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  aria-label="Tanggal mulai"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="terminal-input text-xs"
-                />
-                <input
-                  aria-label="Tanggal selesai"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="terminal-input text-xs"
-                />
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Tanggal Mulai</label>
+              <div className="flex gap-2">
+                <div className="flex-1"><CustomDatePicker value={startDate} onChange={setStartDate} ariaLabel="Tanggal mulai" placeholder="Tgl mulai" /></div>
+                <div className="w-[132px] shrink-0"><CustomTimePicker value={startTime} onChange={setStartTime} ariaLabel="Jam mulai" placeholder="Jam" /></div>
               </div>
+              {startDate && startTime && <p className="mt-1 text-[10px] text-[var(--accent-cyan)]">{new Date(`${startDate}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}, {startTime}</p>}
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Due Time</label>
-              <input
-                type="time"
-                value={dueTime}
-                onChange={(e) => setDueTime(e.target.value)}
-                className="terminal-input text-xs"
-              />
+              <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Tanggal Selesai</label>
+              <div className="flex gap-2">
+                <div className="flex-1"><CustomDatePicker value={endDate} onChange={setEndDate} ariaLabel="Tanggal selesai" placeholder="Tgl selesai" /></div>
+                <div className="w-[132px] shrink-0"><CustomTimePicker value={endTime} onChange={setEndTime} ariaLabel="Jam selesai" placeholder="Jam" /></div>
+              </div>
+              {endDate && endTime && <p className="mt-1 text-[10px] text-[var(--accent-cyan)]">{new Date(`${endDate}T00:00:00`).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}, {endTime}</p>}
             </div>
           </div>
 
@@ -273,17 +243,15 @@ function TaskDetailModalContent({ task, onClose }: { task: Task; onClose: () => 
 
             <div className="space-y-1.5">
               {task.subtasks.map((st) => (
-                <label key={st.id} className="flex min-h-[36px] cursor-pointer items-center gap-2 rounded bg-[var(--bg-app)] px-2.5 py-1.5 transition hover:bg-[var(--bg-muted)]">
-                  <input
-                    type="checkbox"
+                <div key={st.id} className="flex min-h-[36px] cursor-pointer items-center gap-2 rounded bg-[var(--bg-app)] px-2.5 py-1.5 transition hover:bg-[var(--bg-muted)]">
+                  <Checkbox
                     checked={st.completed}
                     onChange={() => toggleSubtask(task.id, st.id)}
-                    className="h-4 w-4 accent-[var(--accent-main)]"
                   />
                   <span className={`text-xs ${st.completed ? 'text-[var(--text-muted)] line-through' : 'text-[var(--text-main)]'}`}>
                     {st.title}
                   </span>
-                </label>
+                </div>
               ))}
             </div>
 

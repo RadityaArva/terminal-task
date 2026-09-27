@@ -2,6 +2,7 @@
 
 import { useTermFlowStore } from '@/lib/store';
 import { Play, Pause, RotateCcw, X, Sparkles, CheckCircle2, ListTodo } from 'lucide-react';
+import Checkbox from '@/components/terminal-ui/Checkbox';
 
 export default function ZenView() {
   const {
@@ -138,20 +139,18 @@ export default function ZenView() {
 
           <div className="space-y-1.5 text-xs">
             {activeTask.subtasks.map((st) => (
-              <label
+              <div
                 key={st.id}
                 className="flex min-h-[40px] cursor-pointer items-center gap-3 rounded border border-[var(--border-main)]/50 bg-[var(--bg-app)] p-2.5 transition hover:border-[var(--accent-cyan)]/40"
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={st.completed}
                   onChange={() => toggleSubtask(activeTask.id, st.id)}
-                  className="h-4 w-4 accent-[var(--accent-main)]"
                 />
                 <span className={st.completed ? 'text-[var(--text-muted)] line-through' : 'font-semibold text-[var(--text-bright)]'}>
                   {st.title}
                 </span>
-              </label>
+              </div>
             ))}
 
             {activeTask.subtasks.length === 0 && (

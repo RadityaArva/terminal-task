@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTermFlowStore } from '@/lib/store';
+import CustomSelect from '@/components/terminal-ui/CustomSelect';
 
 interface NotesPanelProps {
   isOpen: boolean;
@@ -34,10 +35,7 @@ export default function NotesPanel({ isOpen, onClose }: NotesPanelProps) {
           </header>
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
             <div className="flex gap-2 sm:hidden">
-              <select value={activeSelectedId || ''} onChange={(event) => setSelectedId(event.target.value || undefined)} className="terminal-input">
-                <option value="">New note</option>
-                {notes.map((note) => <option key={note.id} value={note.id}>{note.name}</option>)}
-              </select>
+              <CustomSelect value={activeSelectedId || ''} onChange={(v) => setSelectedId(v || undefined)} options={[{ value: "", label: "New note" }, ...notes.map((note) => ({ value: note.id, label: note.name }))]} ariaLabel="Pilih catatan" />
             </div>
             {mode === 'read' && selected ? <NoteReader note={selected} onEdit={() => setMode('edit')} /> : <NoteEditor
             key={activeSelectedId || 'new'}

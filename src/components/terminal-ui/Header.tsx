@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { useDropdownContext } from '@/lib/dropdownContext';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -24,6 +25,8 @@ import {
   Keyboard,
   X,
   LogOut,
+  ChevronDown,
+  LayoutGrid as BoardIcon,
 } from 'lucide-react';
 import { useTermFlowStore, ViewMode } from '@/lib/store';
 import { THEMES, ThemeId } from '@/lib/themes';
@@ -105,6 +108,9 @@ function ThemePreviewDot({ themeId, size = 10 }: { themeId: ThemeId; size?: numb
 
 export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: HeaderProps) {
   const {
+    boards,
+    activeBoardId,
+    setActiveBoardId,
     projects,
     activeProjectId,
     viewMode,
@@ -122,49 +128,45 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const headerRef = useRef<HTMLElement>(null);
 
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const { activeId, open: openDropdown, close: closeDropdown, toggle: toggleDropdown, closeAll, isOpen } = useDropdownContext();
+  const isMenuOpen = isOpen('hamburger');
+  const showMoreMenu = isOpen('more');
+  const showSettingsMenu = isOpen('settings');
+  const showProfileMenu = isOpen('profile');
+  const showBoardMenu = isOpen('board-switcher');
+  const setIsMenuOpen = (v: boolean | ((p: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? (v as (p: boolean) => boolean)(isMenuOpen) : v;
+    if (next) openDropdown('hamburger'); else closeDropdown('hamburger');
+  };
+  const setShowMoreMenu = (v: boolean | ((p: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? (v as (p: boolean) => boolean)(showMoreMenu) : v;
+    if (next) openDropdown('more'); else closeDropdown('more');
+  };
+  const setShowSettingsMenu = (v: boolean | ((p: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? (v as (p: boolean) => boolean)(showSettingsMenu) : v;
+    if (next) openDropdown('settings'); else closeDropdown('settings');
+  };
+  const setShowProfileMenu = (v: boolean | ((p: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? (v as (p: boolean) => boolean)(showProfileMenu) : v;
+    if (next) openDropdown('profile'); else closeDropdown('profile');
+  };
+  const setShowBoardMenu = (v: boolean | ((p: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? (v as (p: boolean) => boolean)(showBoardMenu) : v;
+    if (next) openDropdown('board-switcher'); else closeDropdown('board-switcher');
+  };
   const profile = useTermFlowStore((state) => state.profile);
   const logout = useTermFlowStore((state) => state.logout);
 
-  // auto-close dropdowns when clicking outside navbar
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-        setShowMoreMenu(false);
-        setShowSettingsMenu(false);
-        setShowProfileMenu(false);
-      }
-    };
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsMenuOpen(false);
-        setShowMoreMenu(false);
-        setShowSettingsMenu(false);
-        setShowProfileMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, []);
+  // click outside is handled globally by DropdownProvider (mousedown + data-dropdown-id).
+  // Keep headerRef only for potential future use; no local listeners needed.
 
   // close any open menu immediately when navigating to another view
   useEffect(() => {
-    setIsMenuOpen(false);
-    setShowMoreMenu(false);
-    setShowSettingsMenu(false);
-    setShowProfileMenu(false);
-  }, [viewMode]);
+    closeAll();
+  }, [viewMode, closeAll]);
 
   useEffect(() => {
     const updateClock = () => {
@@ -182,7 +184,8 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
     return () => window.clearInterval(interval);
   }, []);
 
-  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0];
+  const activeBoard = boards.find((b) => b.id === activeBoardId) || null;
+  const activeProject = projects.find((p) => p.id === activeProjectId) || projects.find((p) => p.boardId === activeBoardId) || projects[0];
 
   const views: { id: ViewMode; labelKey: string }[] = [
     { id: 'board', labelKey: 'nav.board' },
@@ -220,12 +223,48 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
             <span className="hidden h-3 w-px bg-[var(--border-main)]/60 sm:block" />
           </button>
 
-          {/* workspace chip — hidden on very small, compact on mobile */}
-          <div className="hidden min-w-0 items-center gap-1.5 rounded-full border border-[var(--border-main)]/50 bg-[var(--bg-app)] px-2.5 py-1 sm:flex">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-main)] shadow-[0_0_6px_var(--accent-main)]" />
-            <span className="max-w-[9rem] truncate text-xs font-semibold tracking-wide text-[var(--text-muted)] lg:max-w-[11rem]">
-              {activeProject.name}
-            </span>
+          {/* Board Switcher — GitHub org-switcher style */}
+          <div className="relative hidden sm:block" data-dropdown-id="board-switcher">
+            <button
+              onClick={() => { if (showBoardMenu) closeDropdown("board-switcher"); else openDropdown("board-switcher"); }}
+              aria-expanded={showBoardMenu}
+              className="flex max-w-[12rem] items-center gap-1.5 rounded-full border border-[var(--border-main)]/50 bg-[var(--bg-app)] px-2.5 py-1 text-left transition hover:border-[var(--accent-cyan)]/40"
+              title={activeBoard ? activeBoard.name : 'Pilih board'}
+            >
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px]" style={{ background: activeBoard ? `${activeBoard.color}18` : 'var(--bg-muted)', borderColor: activeBoard ? `${activeBoard.color}40` : 'var(--border-main)', color: activeBoard?.color || 'var(--text-muted)' }}>
+                {activeBoard?.icon || '📋'}
+              </span>
+              <span className="max-w-[8rem] truncate text-xs font-bold text-[var(--text-bright)] lg:max-w-[10rem]">{activeBoard ? activeBoard.name : 'Pilih Board'}</span>
+              <ChevronDown size={12} className={`shrink-0 text-[var(--text-muted)] transition ${showBoardMenu ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+              {showBoardMenu && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                  transition={{ duration: 0.16 }}
+                  className="absolute left-0 top-[calc(100%+8px)] z-50 w-64 overflow-hidden rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-1.5 shadow-2xl"
+                >
+                  <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Boards</div>
+                  {boards.map((b) => (
+                    <button
+                      key={b.id}
+                      onClick={() => { setActiveBoardId(b.id); closeAll(); }}
+                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs transition ${activeBoardId === b.id ? 'bg-[var(--bg-muted)] text-[var(--accent-cyan)]' : 'hover:bg-[var(--bg-muted)] text-[var(--text-main)]'}`}
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border text-xs" style={{ background: `${b.color}15`, borderColor: `${b.color}30`, color: b.color }}>{b.icon || '📋'}</span>
+                      <span className="min-w-0 flex-1 truncate font-semibold">{b.name}</span>
+                      {activeBoardId === b.id && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-main)]" />}
+                    </button>
+                  ))}
+                  <div className="my-1 border-t border-[var(--border-main)]/60" />
+                  <button onClick={() => { setActiveBoardId(null); closeAll(); }} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-[var(--text-muted)] hover:bg-[var(--bg-muted)] hover:text-[var(--text-bright)]">
+                    <BoardIcon size={14} /> Lihat semua board
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* primary nav — desktop only */}
@@ -290,14 +329,14 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
           <span className="hidden h-5 w-px bg-[var(--border-main)]/50 sm:block" />
 
           {/* more */}
-          <div className="relative hidden sm:block">
+          <div className="relative hidden sm:block" data-dropdown-id="more">
             <IconButton
               icon={MoreHorizontal}
               label="More"
               iconSize={16}
               strokeWidth={1.75}
               active={showMoreMenu}
-              onClick={() => setShowMoreMenu((v) => !v)}
+              onClick={() => { if (showMoreMenu) closeDropdown("more"); else openDropdown("more"); }}
               aria-expanded={showMoreMenu}
             />
             <AnimatePresence>
@@ -313,7 +352,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                   <button
                     onClick={() => {
                       setShowNotes(true);
-                      setShowMoreMenu(false);
+                      closeAll();
                     }}
                     className="menu-item flex w-full items-center gap-2"
                   >
@@ -357,7 +396,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                   <button
                     onClick={() => {
                       onOpenCheatsheet();
-                      setShowMoreMenu(false);
+                      closeAll();
                     }}
                     className="menu-item flex w-full items-center gap-2"
                   >
@@ -382,14 +421,14 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
           </div>
 
           {/* settings */}
-          <div className="relative hidden sm:block">
+          <div className="relative hidden sm:block" data-dropdown-id="settings">
             <IconButton
               icon={Settings}
               label="Settings"
               iconSize={16}
               strokeWidth={1.75}
               active={showSettingsMenu}
-              onClick={() => setShowSettingsMenu((v) => !v)}
+              onClick={() => { if (showSettingsMenu) closeDropdown("settings"); else openDropdown("settings"); }}
               aria-expanded={showSettingsMenu}
             />
             <AnimatePresence>
@@ -399,7 +438,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 4, scale: 0.98 }}
                   transition={{ duration: 0.16 }}
-                  className="absolute right-0 top-[calc(100%+8px)] z-50 w-64 overflow-hidden rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-3 shadow-2xl"
+                  className="absolute right-0 top-[calc(100%+8px)] z-50 w-72 min-w-[18rem] overflow-hidden rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] p-3 shadow-2xl"
                 >
                   <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Theme</label>
                   <div className="space-y-1">
@@ -407,7 +446,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                       <select
                         value={themeId}
                         onChange={(e) => setThemeId(e.target.value as ThemeId)}
-                        className="terminal-input w-full py-2 pl-8 text-xs font-medium"
+                        className="terminal-input w-full py-2.5 pl-10 text-xs font-medium"
                         aria-label="Select theme"
                       >
                         {Object.values(THEMES).map((t) => (
@@ -416,23 +455,23 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                           </option>
                         ))}
                       </select>
-                      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
                         <ThemePreviewDot themeId={themeId} size={12} />
                       </span>
                     </div>
                     {/* theme preview row with dots */}
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <div className="grid grid-cols-2 gap-2 pt-1">
                       {Object.values(THEMES).map((t) => (
                         <button
                           key={t.id}
                           type="button"
                           onClick={() => setThemeId(t.id as ThemeId)}
-                          className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-medium transition ${themeId === t.id ? 'border-[var(--accent-cyan)]/40 bg-[var(--bg-muted)] text-[var(--text-bright)]' : 'border-[var(--border-main)]/50 bg-[var(--bg-app)] text-[var(--text-muted)] hover:border-[var(--border-main)] hover:text-[var(--text-main)]'}`}
+                          className={`inline-flex items-center gap-2.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${themeId === t.id ? 'border-[var(--accent-cyan)]/40 bg-[var(--bg-muted)] text-[var(--text-bright)] font-bold shadow-sm' : 'border-[var(--border-main)]/50 bg-[var(--bg-app)] text-[var(--text-muted)] hover:border-[var(--border-main)] hover:text-[var(--text-main)]'}`}
                           title={t.name}
                           aria-label={`Switch to ${t.name}`}
                         >
-                          <ThemePreviewDot themeId={t.id as ThemeId} size={8} />
-                          <span className="max-w-[5rem] truncate">{t.name}</span>
+                          <ThemePreviewDot themeId={t.id as ThemeId} size={10} />
+                          <span className="truncate">{t.name}</span>
                         </button>
                       ))}
                     </div>
@@ -504,9 +543,9 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
           </div>
 
           {/* profile */}
-          <div className="relative">
+          <div className="relative" data-dropdown-id="profile">
             <button
-              onClick={() => setShowProfileMenu((v) => !v)}
+              onClick={() => { if (showProfileMenu) closeDropdown("profile"); else openDropdown("profile"); }}
               aria-expanded={showProfileMenu}
               className="flex h-10 w-10 min-h-[40px] min-w-[40px] items-center justify-center overflow-hidden rounded-full border-2 border-[var(--bg-muted)] bg-[var(--bg-muted)] text-xs font-bold text-[var(--accent-cyan)] ring-1 ring-[var(--border-main)]/50 transition hover:border-[var(--accent-cyan)]/40 hover:ring-[var(--accent-cyan)]/20 sm:h-9 sm:w-9"
               title="Profile"
@@ -533,7 +572,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                     <div className="truncate text-[11px] text-[var(--text-muted)]">{profile.role || 'Member'}</div>
                   </div>
                   <div className="my-1 border-t border-[var(--border-main)]/60" />
-                  <button onClick={() => setViewMode('profile')} className="menu-item flex w-full min-h-[44px] items-center gap-2.5 py-2.5">
+                  <button onClick={() => { closeAll(); setViewMode('profile'); }} className="menu-item flex w-full min-h-[44px] items-center gap-2.5 py-2.5">
                     <User size={16} strokeWidth={1.75} className="shrink-0" aria-hidden /> Profile
                   </button>
                   <button onClick={logout} className="menu-item flex w-full min-h-[44px] items-center gap-2.5 py-2.5 text-[var(--accent-red)] hover:bg-[var(--accent-red)]/10">
@@ -545,24 +584,26 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
           </div>
 
           {/* hamburger — mobile only */}
+          <span data-dropdown-id="hamburger">
           <IconButton
             icon={Menu}
             label="Toggle navigation"
             iconSize={16}
             strokeWidth={1.75}
             active={isMenuOpen}
-            onClick={() => setIsMenuOpen((o) => !o)}
+            onClick={() => { if (isMenuOpen) closeDropdown("hamburger"); else openDropdown("hamburger"); }}
             aria-expanded={isMenuOpen}
             className="lg:hidden"
             variant={isMenuOpen ? 'ghost' : 'ghost'}
           />
+          </span>
         </div>
       </div>
 
       {/* mobile/workspace sub-bar — visible only on small */}
       <div className="flex items-center gap-2 border-t border-[var(--border-main)]/40 bg-[var(--bg-app)]/60 px-3 py-2 sm:hidden">
         <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent-main)]" />
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--text-muted)]">{activeProject.name}</span>
+        <span className="min-w-0 flex-1 truncate text-xs font-medium text-[var(--text-muted)]">{activeBoard ? `${activeBoard.name} · ${activeProject.name}` : activeProject.name}</span>
         <span className="inline-flex items-center gap-1 shrink-0 rounded-full border border-[var(--border-main)]/60 bg-[var(--bg-surface)] px-2 py-0.5 font-mono text-[10px] font-bold tracking-wide text-[var(--accent-cyan)]">
           <NavLucide id={viewMode as ViewMode} />
           {viewMode}
@@ -572,7 +613,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
       {/* mobile drawer */}
       <AnimatePresence>
         {isMenuOpen && (
-          <motion.div
+          <motion.div data-dropdown-id="hamburger"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
@@ -605,7 +646,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                 <button
                   onClick={() => {
                     setShowNotes(true);
-                    setIsMenuOpen(false);
+                    closeDropdown("hamburger");
                   }}
                   className="flex items-center gap-2 rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)] px-3 py-2.5 text-left text-xs font-medium text-[var(--text-main)] hover:border-[var(--accent-cyan)]/40"
                 >
@@ -618,7 +659,7 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                 <button
                   onClick={() => {
                     onOpenCheatsheet();
-                    setIsMenuOpen(false);
+                    closeDropdown("hamburger");
                   }}
                   className="flex items-center gap-2 rounded-lg border border-[var(--border-main)] bg-[var(--bg-surface)] px-3 py-2.5 text-left text-xs font-medium text-[var(--text-main)] hover:border-[var(--accent-cyan)]/40"
                 >
@@ -657,16 +698,16 @@ export default function Header({ onOpenCommandPalette, onOpenCheatsheet }: Heade
                     <Languages size={16} strokeWidth={1.75} className="shrink-0" aria-hidden /> {lang.toUpperCase()}
                   </button>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
+                <div className="mt-2 grid grid-cols-2 gap-2">
                   {Object.values(THEMES).map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setThemeId(t.id as ThemeId)}
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-medium ${themeId === t.id ? 'border-[var(--accent-cyan)]/40 bg-[var(--bg-muted)] text-[var(--text-bright)]' : 'border-[var(--border-main)]/40 bg-[var(--bg-app)] text-[var(--text-muted)]'}`}
+                      className={`inline-flex items-center gap-2.5 rounded-lg border px-3 py-2 text-xs font-medium ${themeId === t.id ? 'border-[var(--accent-cyan)]/40 bg-[var(--bg-muted)] text-[var(--text-bright)] font-bold' : 'border-[var(--border-main)]/40 bg-[var(--bg-app)] text-[var(--text-muted)]'}`}
                       aria-label={`Switch to ${t.name}`}
                     >
-                      <ThemePreviewDot themeId={t.id as ThemeId} size={7} />
-                      {t.name}
+                      <ThemePreviewDot themeId={t.id as ThemeId} size={10} />
+                      <span className="truncate">{t.name}</span>
                     </button>
                   ))}
                 </div>

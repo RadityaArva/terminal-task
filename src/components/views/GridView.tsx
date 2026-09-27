@@ -9,7 +9,7 @@ interface GridViewProps {
 }
 
 export default function GridView({ onSelectTask, selectedTaskId }: GridViewProps) {
-  const { tasks, activeProjectId, moveTaskStatus, updateTask, searchFilter } = useTermFlowStore();
+  const { activeBoardId, tasks, activeProjectId, moveTaskStatus, updateTask, searchFilter } = useTermFlowStore();
 
   const filteredTasks = tasks.filter((t) => {
     if (t.projectId !== activeProjectId) return false;

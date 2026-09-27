@@ -2,6 +2,7 @@
 
 import { useTermFlowStore, TaskPriority, TaskStatus } from '@/lib/store';
 import { Trash2, X, SlidersHorizontal } from 'lucide-react';
+import CustomSelect from '@/components/terminal-ui/CustomSelect';
 
 export default function BulkActionBar({ ids, onClear }: { ids: string[]; onClear: () => void }) {
   const { bulkUpdateTasks, bulkDeleteTasks } = useTermFlowStore();
@@ -12,12 +13,8 @@ export default function BulkActionBar({ ids, onClear }: { ids: string[]; onClear
         <SlidersHorizontal size={14} strokeWidth={1.75} aria-hidden />
         <span>{ids.length} selected</span>
       </div>
-      <select aria-label="Bulk status" defaultValue="" onChange={(e) => { if (e.target.value) bulkUpdateTasks(ids, { status: e.target.value as TaskStatus }); }} className="terminal-input w-auto py-1">
-        <option value="">Status...</option><option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="review">Review</option><option value="done">Done</option>
-      </select>
-      <select aria-label="Bulk priority" defaultValue="" onChange={(e) => { if (e.target.value) bulkUpdateTasks(ids, { priority: e.target.value as TaskPriority }); }} className="terminal-input w-auto py-1">
-        <option value="">Priority...</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
-      </select>
+      <CustomSelect value="" onChange={(v) => { if (v) bulkUpdateTasks(ids, { status: v as TaskStatus }); }} options={[{ value: "", label: "Status…" }, { value: "todo", label: "To Do" }, { value: "in_progress", label: "In Progress" }, { value: "review", label: "Review" }, { value: "done", label: "Done" }]} ariaLabel="Bulk status" className="w-auto min-w-[124px]" triggerClassName="py-1 text-xs" />
+      <CustomSelect value="" onChange={(v) => { if (v) bulkUpdateTasks(ids, { priority: v as TaskPriority }); }} options={[{ value: "", label: "Priority…" }, { value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }, { value: "urgent", label: "Urgent" }]} ariaLabel="Bulk priority" className="w-auto min-w-[120px]" triggerClassName="py-1 text-xs" />
       <button type="button" onClick={() => { if (confirm(`Delete ${ids.length} tasks?`)) { bulkDeleteTasks(ids); onClear(); } }} className="terminal-button inline-flex items-center gap-1.5 border-[var(--accent-red)] text-[var(--accent-red)]">
         <Trash2 size={13} strokeWidth={1.75} aria-hidden />
         <span>Delete</span>

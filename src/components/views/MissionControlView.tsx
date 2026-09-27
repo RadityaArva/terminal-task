@@ -4,8 +4,8 @@ import { useTermFlowStore } from '@/lib/store';
 import { Rocket, AlertTriangle } from 'lucide-react';
 
 export default function MissionControlView({ onSelectTask }: { onSelectTask: (id: string) => void }) {
-  const { tasks, projects } = useTermFlowStore();
-  const urgent = [...tasks].filter((task) => task.status !== 'done').sort((a, b) => {
+  const { activeBoardId, tasks, projects } = useTermFlowStore();
+  const urgent = [...tasks].filter((task) => (!activeBoardId || task.boardId === activeBoardId) && task.status !== 'done').sort((a, b) => {
     const priority = { urgent: 0, high: 1, medium: 2, low: 3 };
     return priority[a.priority] - priority[b.priority] || a.dueDate.localeCompare(b.dueDate);
   });

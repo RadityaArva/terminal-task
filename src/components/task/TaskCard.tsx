@@ -33,7 +33,7 @@ function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps) {
       onClick={onSelect}
       initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={shouldReduceMotion ? undefined : { y: -2, scale: 1.01 }}
+      whileHover={shouldReduceMotion ? undefined : { y: -2 }}
       transition={{ duration: shouldReduceMotion ? 0 : 0.2, ease: [0.22, 0.8, 0.24, 1] }}
       className={`relative cursor-pointer rounded-md border bg-[var(--bg-surface)] p-3 font-mono text-xs shadow-xs transition-colors duration-150 hover:border-[var(--accent-cyan)] ${
         isSelected

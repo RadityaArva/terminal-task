@@ -23,6 +23,7 @@ export interface CommentItem {
 
 export interface Task {
   id: string;
+  boardId: string;
   projectId: string;
   title: string;
   description: string;
@@ -32,7 +33,9 @@ export interface Task {
   history?: Array<{ id: string; timestamp: string; user: string; field: string; before: string; after: string }>;
   assignee: string;
   startDate?: string;
+  startTime?: string;
   endDate?: string;
+  endTime?: string;
   dueDate: string;
   dueTime?: string;
   labels: string[];
@@ -49,8 +52,20 @@ export interface Task {
   completedAt?: string;
 }
 
+export interface Board {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  description?: string;
+  ownerId?: string;
+  createdAt: string;
+  lastOpenedAt: string;
+}
+
 export interface Project {
   id: string;
+  boardId: string;
   name: string;
   key: string;
   description: string;
@@ -67,6 +82,7 @@ export interface ProjectNote {
 
 export interface EbookSource {
   id: string;
+  boardId: string;
   title: string;
   type: 'pdf' | 'link';
   url: string; // url or data URL / file name
@@ -78,6 +94,7 @@ export interface EbookSource {
 
 export interface Note {
   id: string;
+  boardId: string;
   title: string;
   content: string;
   tags: string[];
@@ -128,6 +145,13 @@ export interface NotificationSettings {
 }
 
 interface TermFlowState {
+  // Boards
+  boards: Board[];
+  activeBoardId: string | null;
+  addBoard: (data: { name: string; icon?: string; color?: string; description?: string }) => string;
+  updateBoard: (id: string, updates: Partial<Pick<Board,'name'|'icon'|'color'|'description'>>) => void;
+  deleteBoard: (id: string) => void;
+  setActiveBoardId: (boardId: string | null) => void;
   // Tasks & Projects
   tasks: Task[];
   projects: Project[];
@@ -142,7 +166,7 @@ interface TermFlowState {
   projectNotes: Record<string, ProjectNote[]>;
   notes: Note[];
   ebooks: EbookSource[];
-  addEbook: (item: Omit<EbookSource, 'id' | 'createdAt'>) => string;
+  addEbook: (item: Omit<EbookSource, 'id' | 'createdAt' | 'boardId'> & Partial<Pick<EbookSource,'boardId'>>) => string;
   deleteEbook: (id: string) => void;
 
   
@@ -176,12 +200,12 @@ interface TermFlowState {
   setLang: (lang: Language) => void;
   setViewMode: (viewMode: ViewMode) => void;
   setActiveProjectId: (projectId: string) => void;
-  addProject: (project: Omit<Project, 'id' | 'key'>) => string;
+  addProject: (project: Omit<Project, 'id' | 'key' | 'boardId'> & Partial<Pick<Project,'boardId'>>) => string;
   setSelectedTaskId: (taskId: string | null) => void;
   setSearchFilter: (filter: string) => void;
   saveProjectNote: (projectId: string, note: Omit<ProjectNote, 'id' | 'updatedAt'> & { id?: string }) => void;
   deleteProjectNote: (projectId: string, noteId: string) => void;
-  addNote: (note: Pick<Note, 'title'> & Partial<Pick<Note, 'content' | 'tags' | 'folder'>>) => string;
+  addNote: (note: Pick<Note, 'title'> & Partial<Pick<Note, 'content' | 'tags' | 'folder' | 'boardId'>>) => string;
   updateNote: (id: string, updates: Partial<Pick<Note, 'title' | 'content' | 'tags' | 'folder'>>) => void;
   deleteNote: (id: string) => void;
   openNote: (id: string) => void;
@@ -213,16 +237,23 @@ interface TermFlowState {
   tickPomodoro: () => void;
 }
 
+const initialBoards: Board[] = [
+  { id: 'board-1', name: 'Pekerjaan', icon: '💼', color: '#50fa7b', description: 'Board utama untuk pekerjaan & proyek TermFlow', createdAt: '2026-09-20', lastOpenedAt: new Date().toISOString() },
+  { id: 'board-2', name: 'Kuliah', icon: '🎓', color: '#8be9fd', description: 'Tugas, jadwal, dan catatan kuliah', createdAt: '2026-09-20', lastOpenedAt: new Date().toISOString() },
+  { id: 'board-3', name: 'Personal', icon: '🏡', color: '#ffb86c', description: 'Urusan pribadi & side project', createdAt: '2026-09-20', lastOpenedAt: new Date().toISOString() },
+];
+
 const initialProjects: Project[] = [
-  { id: 'inbox', name: 'Inbox', key: 'IN', description: 'Quick capture tasks awaiting triage' },
-  { id: 'proj-1', name: 'TermFlow Web App', key: 'TF', description: 'Terminal-first task manager frontend' },
-  { id: 'proj-2', name: 'Backend API Service', key: 'API', description: 'RESTful API and WebSocket engine' },
-  { id: 'proj-3', name: 'CLI Tool Integration', key: 'CLI', description: 'Native binary helper and shell bindings' },
+  { id: 'inbox', boardId: 'board-1', name: 'Inbox', key: 'IN', description: 'Quick capture tasks awaiting triage' },
+  { id: 'proj-1', boardId: 'board-1', name: 'TermFlow Web App', key: 'TF', description: 'Terminal-first task manager frontend' },
+  { id: 'proj-2', boardId: 'board-1', name: 'Backend API Service', key: 'API', description: 'RESTful API and WebSocket engine' },
+  { id: 'proj-3', boardId: 'board-1', name: 'CLI Tool Integration', key: 'CLI', description: 'Native binary helper and shell bindings' },
 ];
 
 const initialTasks: Task[] = [
   {
     id: 'TF-1',
+    boardId: 'board-1',
     projectId: 'proj-1',
     title: 'Desain Command Palette (: / Ctrl+K)',
     description: 'Bentuk modal command palette dengan support auto-complete, keyboard shortcuts, dan command parser.',
@@ -249,6 +280,7 @@ const initialTasks: Task[] = [
   },
   {
     id: 'TF-2',
+    boardId: 'board-1',
     projectId: 'proj-1',
     title: 'Implementasi 8 Preset Tema CLI',
     description: 'Dukungan tema Dracula, Nord, Solarized, Monokai, GitHub Dark/Light, High Contrast dengan CSS variables real-time.',
@@ -267,6 +299,7 @@ const initialTasks: Task[] = [
   },
   {
     id: 'TF-3',
+    boardId: 'board-1',
     projectId: 'proj-1',
     title: 'Dukungan Dwibahasa (ID / EN)',
     description: 'Toggle internasionalisasi cepat tanpa reload halaman via navbar atau command palette.',
@@ -284,6 +317,7 @@ const initialTasks: Task[] = [
   },
   {
     id: 'TF-4',
+    boardId: 'board-1',
     projectId: 'proj-1',
     title: 'Mode Zen & Timer Pomodoro',
     description: 'Tampilan bersih tanpa distraksi untuk menyelesaikan satu task utama dengan timer 25 menit.',
@@ -301,6 +335,7 @@ const initialTasks: Task[] = [
   },
   {
     id: 'TF-5',
+    boardId: 'board-1',
     projectId: 'proj-1',
     title: 'Export Data (JSON, Markdown, CSV)',
     description: 'Izinkan user mengunduh laporan proyek dalam bentuk file Markdown, JSON, atau spreadsheet CSV.',
@@ -340,6 +375,8 @@ const initialProfile: UserProfile = {
 export const useTermFlowStore = create<TermFlowState>()(
   persist(
     (set, get) => ({
+      boards: initialBoards,
+      activeBoardId: null,
       tasks: initialTasks,
       projects: initialProjects,
       activeProjectId: 'proj-1',
@@ -354,6 +391,7 @@ export const useTermFlowStore = create<TermFlowState>()(
       ebooks: [
         {
           id: 'eb-1',
+          boardId: 'board-1',
           title: 'The Pragmatic Programmer (Summary & Notes)',
           type: 'pdf',
           url: '#',
@@ -364,6 +402,7 @@ export const useTermFlowStore = create<TermFlowState>()(
         },
         {
           id: 'eb-2',
+          boardId: 'board-1',
           title: 'Linux CLI Cheat Sheet & System Commands',
           type: 'link',
           url: 'https://cheat.sh/',
@@ -400,8 +439,41 @@ export const useTermFlowStore = create<TermFlowState>()(
       setLang: (lang) => set({ lang }),
       setViewMode: (viewMode) => set({ viewMode }),
       setActiveProjectId: (projectId) => set({ activeProjectId: projectId }),
+      setActiveBoardId: (boardId) => {
+        if (boardId) {
+          set((state) => ({
+            activeBoardId: boardId,
+            boards: state.boards.map((b) => b.id === boardId ? { ...b, lastOpenedAt: new Date().toISOString() } : b),
+          }));
+          // auto-select first project in board if current not in board
+          const st = get();
+          const inBoard = st.projects.some((p) => p.boardId === boardId && p.id === st.activeProjectId);
+          if (!inBoard) {
+            const first = st.projects.find((p) => p.boardId === boardId);
+            if (first) set({ activeProjectId: first.id });
+          }
+        } else {
+          set({ activeBoardId: null });
+        }
+      },
+      addBoard: (data) => {
+        const id = `board-${Date.now()}`;
+        const now = new Date().toISOString();
+        const board: Board = { id, name: data.name.trim() || 'Untitled Board', icon: data.icon || '📋', color: data.color || '#50fa7b', description: data.description || '', createdAt: now, lastOpenedAt: now };
+        const inboxProject: Project = { id: `inbox-${id}`, boardId: id, name: 'Inbox', key: 'IN', description: 'Quick capture' };
+        set((state) => ({ boards: [...state.boards, board], projects: [...state.projects, inboxProject], activeBoardId: id, activeProjectId: inboxProject.id, viewMode: 'board' as ViewMode }));
+        return id;
+      },
+      updateBoard: (id, updates) => set((state) => ({ boards: state.boards.map((b) => b.id === id ? { ...b, ...updates } : b) })),
+      deleteBoard: (id) => set((state) => {
+        if (state.boards.length <= 1) return state;
+        const remaining = state.boards.filter((b) => b.id !== id);
+        const fallback = remaining[0]?.id || null;
+        return { boards: remaining, activeBoardId: state.activeBoardId === id ? fallback : state.activeBoardId, projects: state.projects.filter((p) => p.boardId !== id), tasks: state.tasks.filter((t) => t.boardId !== id), notes: state.notes.filter((n) => n.boardId !== id), ebooks: state.ebooks.filter((e) => e.boardId !== id) };
+      }),
       addProject: (projectData) => {
         const state = get();
+        const boardId = state.activeBoardId || state.boards[0]?.id || 'board-1';
         const id = `proj-${Date.now()}`;
         const keyBase = projectData.name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() || 'NEW';
         const usedKeys = new Set(state.projects.map((project) => project.key));
@@ -409,7 +481,7 @@ export const useTermFlowStore = create<TermFlowState>()(
         let suffix = 2;
         while (usedKeys.has(key)) key = `${keyBase.slice(0, 3 - String(suffix).length)}${suffix++}`;
         set({
-          projects: [...state.projects, { ...projectData, id, key }],
+          projects: [...state.projects, { ...projectData, boardId, id, key }],
           activeProjectId: id,
           viewMode: 'board'
         });
@@ -443,8 +515,9 @@ export const useTermFlowStore = create<TermFlowState>()(
       addNote: (note) => {
         const id = `note-${Date.now()}`;
         const now = new Date().toISOString();
+        const boardId = (note as Note).boardId || get().activeBoardId || get().boards[0]?.id || 'board-1';
         set((state) => ({
-          notes: [{ id, title: note.title.trim() || 'Untitled note', content: note.content || '', tags: note.tags || [], folder: note.folder?.trim() || undefined, createdAt: now, updatedAt: now, lastOpenedAt: now }, ...state.notes]
+          notes: [{ id, boardId, title: note.title.trim() || 'Untitled note', content: note.content || '', tags: note.tags || [], folder: note.folder?.trim() || undefined, createdAt: now, updatedAt: now, lastOpenedAt: now }, ...state.notes]
         }));
         return id;
       },
@@ -456,7 +529,8 @@ export const useTermFlowStore = create<TermFlowState>()(
       addEbook: (item) => {
         const id = `ebook-${Date.now()}`;
         const now = new Date().toISOString();
-        const newEbook: EbookSource = { ...item, id, createdAt: now };
+        const boardId = (item as EbookSource).boardId || get().activeBoardId || get().boards[0]?.id || 'board-1';
+        const newEbook: EbookSource = { ...item, boardId, id, createdAt: now };
         set((state) => ({ ebooks: [newEbook, ...state.ebooks] }));
         return id;
       },
@@ -483,9 +557,11 @@ export const useTermFlowStore = create<TermFlowState>()(
       addTask: (taskData) => {
         const state = get();
         const targetProjectId = taskData.projectId || state.activeProjectId;
+        const boardId = (taskData as Task).boardId || state.projects.find(p => p.id === targetProjectId)?.boardId || state.activeBoardId || state.boards[0]?.id || 'board-1';
         const id = `${state.projects.find(p => p.id === targetProjectId)?.key || 'TF'}-${state.tasks.length + 1}`;
         const newTask: Task = {
           id,
+          boardId,
           projectId: targetProjectId,
           title: taskData.title || 'New Task',
           description: taskData.description || '',
@@ -494,8 +570,11 @@ export const useTermFlowStore = create<TermFlowState>()(
           energyLevel: taskData.energyLevel || 'medium',
           assignee: taskData.assignee || 'radit',
           startDate: taskData.startDate || new Date().toISOString().slice(0, 10),
+          startTime: (taskData as Task).startTime || '09:00',
           endDate: taskData.endDate || taskData.dueDate || new Date().toISOString().slice(0, 10),
+          endTime: (taskData as Task).endTime || taskData.dueTime || '17:00',
           dueDate: taskData.dueDate || new Date().toISOString().slice(0, 10),
+          dueTime: (taskData as Task).dueTime || (taskData as Task).endTime || '17:00',
           labels: taskData.labels || [],
           subtasks: taskData.subtasks || [],
           comments: [],
@@ -775,6 +854,8 @@ export const useTermFlowStore = create<TermFlowState>()(
       name: 'termflow-storage-v1',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
+        boards: state.boards,
+        activeBoardId: state.activeBoardId,
         tasks: state.tasks,
         projects: state.projects,
         activeProjectId: state.activeProjectId,

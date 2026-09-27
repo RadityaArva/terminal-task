@@ -62,9 +62,9 @@ function buildSegments(tasks: Task[], week: Date[]) {
 }
 
 export default function TimelineView({ onSelectTask }: TimelineViewProps) {
-  const { tasks, activeProjectId } = useTermFlowStore();
+  const { activeBoardId, tasks, activeProjectId } = useTermFlowStore();
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
-  const projectTasks = tasks.filter((task) => task.projectId === activeProjectId && task.dueDate);
+  const projectTasks = tasks.filter((task) => (!activeBoardId || task.boardId === activeBoardId) && task.projectId === activeProjectId && task.dueDate);
   const days = useMemo(() => {
     const first = new Date(month.getFullYear(), month.getMonth(), 1);
     const start = new Date(first);

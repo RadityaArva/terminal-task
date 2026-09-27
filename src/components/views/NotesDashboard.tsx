@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { EbookSource, Note, useTermFlowStore } from '@/lib/store';
 import { Search, X, Plus, BookOpen, FileText, Link2, File, Trash2, ExternalLink } from 'lucide-react';
+import CustomSelect from '@/components/terminal-ui/CustomSelect';
 
 type SortMode = 'updated' | 'title' | 'opened';
 type PanelMode = 'split' | 'editor' | 'preview';
@@ -10,7 +11,9 @@ type Room = 'notes' | 'ebook';
 type EbookFilter = 'all' | 'pdf' | 'link';
 
 export default function NotesDashboard() {
-  const { notes, ebooks, addNote, updateNote, deleteNote, openNote, addEbook, deleteEbook } = useTermFlowStore();
+  const { notes, ebooks, addNote, updateNote, deleteNote, openNote, addEbook, deleteEbook, activeBoardId } = useTermFlowStore();
+  const boardNotes: Note[] = activeBoardId ? notes.filter((n) => n.boardId === activeBoardId) : notes;
+  const boardEbooks: EbookSource[] = activeBoardId ? ebooks.filter((e) => e.boardId === activeBoardId) : ebooks;
   const [room, setRoom] = useState<Room>('notes');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sort, setSort] = useState<SortMode>('updated');
@@ -48,7 +51,7 @@ export default function NotesDashboard() {
   );
 
   const selected = notes.find((n) => n.id === selectedId) || filteredNotes[0];
-  const folders = [...new Set(notes.map((n) => n.folder).filter(Boolean))] as string[];
+  const folders = [...new Set(boardNotes.map((n) => n.folder).filter(Boolean))] as string[];
   const tags = [...new Set(notes.flatMap((n) => n.tags))];
 
   useEffect(() => {
@@ -77,7 +80,7 @@ export default function NotesDashboard() {
           className={`inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition ${room === 'notes' ? 'border-[var(--accent-cyan)] bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]' : 'border-[var(--border-main)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-bright)]'}`}
         >
           <FileText size={14} strokeWidth={1.75} aria-hidden /> Notes
-          <span className="rounded-full bg-[var(--bg-muted)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">{notes.length}</span>
+          <span className="rounded-full bg-[var(--bg-muted)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">{boardNotes.length}</span>
         </button>
         <button
           type="button"
@@ -85,7 +88,7 @@ export default function NotesDashboard() {
           className={`inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition ${room === 'ebook' ? 'border-[var(--accent-cyan)] bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]' : 'border-[var(--border-main)] bg-[var(--bg-app)] text-[var(--text-muted)] hover:text-[var(--text-bright)]'}`}
         >
           <BookOpen size={14} strokeWidth={1.75} aria-hidden /> Ebook
-          <span className="rounded-full bg-[var(--bg-muted)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">{ebooks.length}</span>
+          <span className="rounded-full bg-[var(--bg-muted)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--text-muted)]">{boardEbooks.length}</span>
         </button>
         <span className="ml-1 hidden text-[11px] text-[var(--text-muted)] sm:inline">· {room === 'notes' ? 'Markdown notes' : 'PDF & Link sources'} · tekan <kbd className="rounded border border-[var(--border-main)] bg-[var(--bg-muted)] px-1 py-0.5 font-mono text-[10px] text-[var(--accent-cyan)]">r</kbd> reading mode (notes)</span>
       </div>
@@ -151,27 +154,9 @@ export default function NotesDashboard() {
       {room === 'notes' ? (
         <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
           <aside className="terminal-panel space-y-3 p-3">
-            <select value={sort} onChange={(e) => setSort(e.target.value as SortMode)} className="terminal-input">
-              <option value="updated">Terbaru diubah</option>
-              <option value="title">Judul A-Z</option>
-              <option value="opened">Terakhir dibuka</option>
-            </select>
-            <select value={folder} onChange={(e) => setFolder(e.target.value)} className="terminal-input">
-              <option value="">Semua folder</option>
-              {folders.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </select>
-            <select value={tag} onChange={(e) => setTag(e.target.value)} className="terminal-input">
-              <option value="">Semua tag</option>
-              {tags.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+            <CustomSelect value={sort} onChange={(v) => setSort(v as SortMode)} options={[{ value: "updated", label: "Terbaru diubah" }, { value: "title", label: "Judul A-Z" }, { value: "opened", label: "Terakhir dibuka" }]} ariaLabel="Urutkan" />
+            <CustomSelect value={folder} onChange={setFolder} options={[{ value: "", label: "Semua folder" }, ...folders.map((f) => ({ value: f, label: f }))]} ariaLabel="Folder" />
+            <CustomSelect value={tag} onChange={setTag} options={[{ value: "", label: "Semua tag" }, ...tags.map((t) => ({ value: t, label: t }))]} ariaLabel="Tag" />
             <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
               {filteredNotes.length === 0 ? (
                 <div className="rounded border border-dashed border-[var(--border-main)] bg-[var(--bg-app)] p-4 text-center text-[11px] text-[var(--text-muted)]">Belum ada catatan sesuai filter.</div>
@@ -223,7 +208,7 @@ export default function NotesDashboard() {
         />
       )}
       {showEbookModal && (
-        <AddEbookModal
+        <AddEbookModal open={showEbookModal} boardId={activeBoardId || ''}
           onClose={() => setShowEbookModal(false)}
           onSave={(data) => {
             addEbook(data);
@@ -243,8 +228,8 @@ function NewNoteModal({ onClose, onSave }: { onClose: () => void; onSave: (data:
   const canSave = title.trim().length > 0;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="terminal-panel w-full max-w-lg p-4 sm:p-5" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center justify-between">
+      <div onClick={(e) => e.stopPropagation()} className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] shadow-2xl">
+        <div className="shrink-0 border-b border-[var(--border-main)] bg-[var(--bg-app)] px-5 py-4 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-sm font-bold text-[var(--accent-cyan)]">
             <FileText size={16} strokeWidth={1.75} aria-hidden /> New Note
           </h3>
@@ -252,15 +237,15 @@ function NewNoteModal({ onClose, onSave }: { onClose: () => void; onSave: (data:
             <X size={16} strokeWidth={1.75} />
           </button>
         </div>
-        <div className="space-y-3">
+        <div className="flex-1 space-y-3 overflow-y-auto p-5">
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Judul catatan *" className="terminal-input font-bold" />
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Isi Markdown..." rows={6} className="terminal-input resize-y font-mono text-sm leading-6" />
+          <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Isi Markdown..." rows={6} className="terminal-input resize-none font-mono text-sm leading-6" style={{ resize: 'none' } as React.CSSProperties} />
           <div className="grid gap-2 sm:grid-cols-2">
             <input value={folder} onChange={(e) => setFolder(e.target.value)} placeholder="Folder (opsional)" className="terminal-input" />
             <input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} placeholder="tag1, tag2" className="terminal-input" />
           </div>
         </div>
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-[var(--border-main)] bg-[var(--bg-app)] px-5 py-3">
           <button type="button" onClick={onClose} className="terminal-button">
             Batal
           </button>
@@ -278,7 +263,8 @@ function NewNoteModal({ onClose, onSave }: { onClose: () => void; onSave: (data:
   );
 }
 
-function AddEbookModal({ onClose, onSave }: { onClose: () => void; onSave: (data: Omit<EbookSource, 'id' | 'createdAt'>) => void }) {
+function AddEbookModal({ open, onClose, onSave, boardId }: { open: boolean; onClose: () => void; onSave: (data: Omit<EbookSource, 'id' | 'createdAt'>) => void; boardId: string }) {
+  if (!open) return null;
   const [title, setTitle] = useState('');
   const [type, setType] = useState<'pdf' | 'link'>('pdf');
   const [url, setUrl] = useState('');
@@ -356,7 +342,7 @@ function AddEbookModal({ onClose, onSave }: { onClose: () => void; onSave: (data
           <button
             type="button"
             disabled={!canSave}
-            onClick={() => onSave({ title: title.trim(), type, url: url.trim(), fileName: fileName || undefined, description: description.trim() || undefined, tags: tagsStr.split(',').map((s) => s.trim()).filter(Boolean) })}
+            onClick={() => onSave({ boardId, title: title.trim(), type, url: url.trim(), fileName: fileName || undefined, description: description.trim() || undefined, tags: tagsStr.split(',').map((s) => s.trim()).filter(Boolean) })}
             className="terminal-button terminal-button-primary disabled:opacity-50"
           >
             <Plus size={14} className="mr-1 inline" aria-hidden /> Simpan ke Ebook
@@ -368,6 +354,7 @@ function AddEbookModal({ onClose, onSave }: { onClose: () => void; onSave: (data
 }
 
 function EbookRoom({ ebooks, filter, onFilterChange, onDelete, query }: { ebooks: EbookSource[]; filter: EbookFilter; onFilterChange: (f: EbookFilter) => void; onDelete: (id: string) => void; query: string }) {
+  const boardEbooks = ebooks;
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -378,22 +365,22 @@ function EbookRoom({ ebooks, filter, onFilterChange, onDelete, query }: { ebooks
             onClick={() => onFilterChange(f)}
             className={`rounded-full border px-3 py-1.5 text-xs font-bold capitalize ${filter === f ? 'border-[var(--accent-cyan)] bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]' : 'border-[var(--border-main)] bg-[var(--bg-app)] text-[var(--text-muted)]'}`}
           >
-            {f === 'all' ? 'Semua' : f.toUpperCase()} {f !== 'all' && `· ${ebooks.filter((e) => e.type === f).length}`}
+            {f === 'all' ? 'Semua' : f.toUpperCase()} {f !== 'all' && `· ${boardEbooks.filter((e) => e.type === f).length}`}
           </button>
         ))}
         <span className="ml-auto text-[11px] text-[var(--text-muted)]">
-          {ebooks.length} item {query ? `· filter: "${query}"` : ''}
+          {boardEbooks.length} item {query ? `· filter: "${query}"` : ''}
         </span>
       </div>
 
-      {ebooks.length === 0 ? (
+      {boardEbooks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--border-main)] bg-[var(--bg-app)] p-8 text-center text-xs text-[var(--text-muted)]">
           Belum ada ebook/source {filter !== 'all' ? `(${filter})` : ''}. Klik <span className="font-bold text-[var(--accent-cyan)]">Add Ebook/Source</span> untuk menambah PDF atau Link.
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {ebooks.map((eb) => (
-            <article key={eb.id} className="terminal-panel flex flex-col p-3">
+          {boardEbooks.map((eb) => (
+            <article key={eb.id} className="terminal-panel flex h-full flex-col p-3">
               <div className="mb-2 flex items-center gap-2">
                 <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold ${eb.type === 'pdf' ? 'border-[var(--accent-purple)]/40 bg-[var(--accent-purple)]/10 text-[var(--accent-purple)]' : 'border-[var(--accent-cyan)]/40 bg-[var(--accent-cyan)]/10 text-[var(--accent-cyan)]'}`}>
                   {eb.type === 'pdf' ? <File size={11} strokeWidth={1.75} aria-hidden /> : <Link2 size={11} strokeWidth={1.75} aria-hidden />}
@@ -405,6 +392,7 @@ function EbookRoom({ ebooks, filter, onFilterChange, onDelete, query }: { ebooks
               {eb.fileName && <p className="mt-1 truncate text-[11px] text-[var(--text-muted)]">{eb.fileName}</p>}
               {eb.description && <p className="mt-2 line-clamp-3 text-xs leading-5 text-[var(--text-muted)]">{eb.description}</p>}
               {eb.tags.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{eb.tags.map((t) => (<span key={t} className="rounded bg-[var(--bg-muted)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]">#{t}</span>))}</div>}
+              <div className="flex-1" aria-hidden />
               <div className="mt-3 flex items-center gap-2">
                 <a href={eb.url} target="_blank" rel="noreferrer" className="inline-flex flex-1 items-center justify-center gap-1 rounded border border-[var(--border-main)] bg-[var(--bg-app)] px-2 py-1.5 text-xs font-bold text-[var(--accent-cyan)] hover:border-[var(--accent-cyan)]/40">
                   <ExternalLink size={12} strokeWidth={1.75} aria-hidden /> Buka

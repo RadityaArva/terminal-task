@@ -4,6 +4,10 @@ import { useState, useRef } from 'react';
 import { useTermFlowStore, TaskStatus } from '@/lib/store';
 import { Plus, GripVertical } from 'lucide-react';
 import TaskCard from '../task/TaskCard';
+import CustomSelect from '@/components/terminal-ui/CustomSelect';
+import CustomDatePicker from '@/components/terminal-ui/CustomDatePicker';
+import CustomTimePicker from '@/components/terminal-ui/CustomTimePicker';
+import ChecklistBuilder, { ChecklistItem } from '@/components/terminal-ui/ChecklistBuilder';
 import { getTranslation } from '@/lib/i18n';
 
 interface BoardViewProps {
@@ -19,7 +23,7 @@ const columns: { status: TaskStatus; labelKey: string; icon: string; color: stri
 ];
 
 export default function BoardView({ onSelectTask, selectedTaskId }: BoardViewProps) {
-  const { tasks, activeProjectId, moveTaskStatus, addTask, deleteTask, searchFilter, lang } = useTermFlowStore();
+  const { activeBoardId, tasks, activeProjectId, moveTaskStatus, addTask, deleteTask, searchFilter, lang } = useTermFlowStore();
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dropColumn, setDropColumn] = useState<TaskStatus | null>(null);
@@ -29,10 +33,11 @@ export default function BoardView({ onSelectTask, selectedTaskId }: BoardViewPro
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const [draft, setDraft] = useState({
     title: '', description: '', status: 'todo' as TaskStatus, priority: 'medium' as const,
-    assignee: 'radit', startDate: new Date().toISOString().slice(0, 10), endDate: new Date().toISOString().slice(0, 10), dueDate: new Date().toISOString().slice(0, 10), dueTime: '09:00', labels: '', subtasks: ''
+    assignee: 'radit', startDate: new Date().toISOString().slice(0, 10), startTime: '09:00', endDate: new Date().toISOString().slice(0, 10), endTime: '17:00', labels: '', subtasks: [] as ChecklistItem[]
   });
 
   const filteredTasks = tasks.filter((task) => {
+    if (activeBoardId && task.boardId !== activeBoardId) return false;
     if (task.projectId !== activeProjectId) return false;
     if (!searchFilter) return true;
     const query = searchFilter.toLowerCase();
@@ -46,11 +51,11 @@ export default function BoardView({ onSelectTask, selectedTaskId }: BoardViewPro
     if (!draft.title.trim()) return;
     addTask({
       title: draft.title.trim(), description: draft.description.trim(), status: draft.status, priority: draft.priority,
-      assignee: draft.assignee.trim() || 'radit', startDate: draft.startDate, endDate: draft.endDate, dueDate: draft.dueDate, dueTime: draft.dueTime,
+      assignee: draft.assignee.trim() || 'radit', startDate: draft.startDate, startTime: draft.startTime, endDate: draft.endDate, endTime: draft.endTime, dueDate: draft.endDate, dueTime: draft.endTime,
       labels: draft.labels.split(',').map((l) => l.trim().replace(/^#/, '')).filter(Boolean),
-      subtasks: draft.subtasks.split('\n').map((title, index) => ({ id: `draft-${Date.now()}-${index}`, title: title.trim(), completed: false })).filter((s) => s.title)
+      subtasks: draft.subtasks.filter((s) => s.title.trim()).map((s) => ({ id: s.id, title: s.title.trim(), completed: s.completed }))
     });
-    setDraft({ title: '', description: '', status: 'todo', priority: 'medium', assignee: 'radit', startDate: new Date().toISOString().slice(0, 10), endDate: new Date().toISOString().slice(0, 10), dueDate: new Date().toISOString().slice(0, 10), dueTime: '09:00', labels: '', subtasks: '' });
+    setDraft({ title: '', description: '', status: 'todo', priority: 'medium', assignee: 'radit', startDate: new Date().toISOString().slice(0, 10), startTime: '09:00', endDate: new Date().toISOString().slice(0, 10), endTime: '17:00', labels: '', subtasks: [] });
     setIsComposerOpen(false);
   };
 
@@ -69,8 +74,6 @@ export default function BoardView({ onSelectTask, selectedTaskId }: BoardViewPro
     else if (clientX < rect.left + edge) scroller.scrollBy({ left: -14 });
   };
 
-  // Pointer-based drag: works for mouse + touch. Started from the drag handle
-  // (touch-action:none), so page/card scroll still works from the card body.
   const handleDragHandlePointerDown = (e: React.PointerEvent, taskId: string) => {
     e.preventDefault();
     dragStartRef.current = { x: e.clientX, y: e.clientY };
@@ -100,7 +103,6 @@ export default function BoardView({ onSelectTask, selectedTaskId }: BoardViewPro
     setDropColumn(null);
     setGhostPos(null);
     dragStartRef.current = null;
-    // suppress the click that follows a real drag so the detail modal doesn't open
     if (dragMovedRef.current) {
       setTimeout(() => { dragMovedRef.current = false; }, 50);
     }
@@ -124,15 +126,33 @@ export default function BoardView({ onSelectTask, selectedTaskId }: BoardViewPro
           <form onSubmit={createTask} className="grid gap-3 rounded-lg border border-[var(--accent-cyan)]/50 bg-[var(--bg-surface)] p-4 text-xs shadow-lg animate-in fade-in slide-in-from-top-2 duration-200">
             <div className="flex items-center gap-2 text-[var(--accent-cyan)] font-bold"><span>&gt;</span><span>new task --interactive</span></div>
             <input required value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="Judul board / task *" className="terminal-input text-sm font-bold" />
-            <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Deskripsi atau note utama..." rows={3} className="terminal-input resize-y" />
+            <textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} placeholder="Deskripsi atau note utama..." rows={3} className="terminal-input resize-none text-xs leading-5" style={{ resize: 'none' } as React.CSSProperties} />
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <select value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value as TaskStatus })} className="terminal-input"><option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="review">Review</option><option value="done">Done</option></select>
-              <select value={draft.priority} onChange={(e) => setDraft({ ...draft, priority: e.target.value as typeof draft.priority })} className="terminal-input"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="urgent">Urgent</option></select>
+              <CustomSelect value={draft.status} onChange={(v) => setDraft({ ...draft, status: v as TaskStatus })} options={[{ value: 'todo', label: 'To Do' }, { value: 'in_progress', label: 'In Progress' }, { value: 'review', label: 'Review' }, { value: 'done', label: 'Done' }]} ariaLabel="Status" />
+              <CustomSelect value={draft.priority} onChange={(v) => setDraft({ ...draft, priority: v as typeof draft.priority })} options={[{ value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }, { value: 'urgent', label: 'Urgent' }]} ariaLabel="Prioritas" />
               <input value={draft.assignee} onChange={(e) => setDraft({ ...draft, assignee: e.target.value })} placeholder="Assignee" className="terminal-input" />
-              <div className="grid grid-cols-2 gap-2"><input type="date" aria-label="Tanggal mulai" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} className="terminal-input" /><input type="date" aria-label="Tanggal selesai" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} className="terminal-input" /></div>
+              <input value={draft.labels} onChange={(e) => setDraft({ ...draft, labels: e.target.value })} placeholder="Labels, pisahkan dengan koma" className="terminal-input" />
             </div>
-            <input value={draft.labels} onChange={(e) => setDraft({ ...draft, labels: e.target.value })} placeholder="Labels, pisahkan dengan koma" className="terminal-input" />
-            <textarea value={draft.subtasks} onChange={(e) => setDraft({ ...draft, subtasks: e.target.value })} placeholder="Checklist (satu per baris)" rows={3} className="terminal-input resize-y" />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Tanggal Mulai</label>
+                <div className="flex gap-2">
+                  <div className="flex-1"><CustomDatePicker value={draft.startDate} onChange={(v) => setDraft({ ...draft, startDate: v })} ariaLabel="Tanggal mulai" placeholder="Tgl mulai" /></div>
+                  <div className="w-[130px] shrink-0"><CustomTimePicker value={draft.startTime} onChange={(v) => setDraft({ ...draft, startTime: v })} ariaLabel="Jam mulai" placeholder="Jam" /></div>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Tanggal Selesai</label>
+                <div className="flex gap-2">
+                  <div className="flex-1"><CustomDatePicker value={draft.endDate} onChange={(v) => setDraft({ ...draft, endDate: v })} ariaLabel="Tanggal selesai" placeholder="Tgl selesai" /></div>
+                  <div className="w-[130px] shrink-0"><CustomTimePicker value={draft.endTime} onChange={(v) => setDraft({ ...draft, endTime: v })} ariaLabel="Jam selesai" placeholder="Jam" /></div>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-lg border border-[var(--border-main)]/40 bg-[var(--bg-app)]/40 p-3">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-[var(--accent-main)]">Checklist / Sub-tasks</div>
+              <ChecklistBuilder value={draft.subtasks} onChange={(v) => setDraft({ ...draft, subtasks: v })} placeholder="Nama item..." />
+            </div>
             <div className="flex justify-end gap-2"><button type="button" onClick={() => setIsComposerOpen(false)} className="terminal-button">Batal</button><button type="submit" className="terminal-button terminal-button-primary">Simpan board ↵</button></div>
           </form>
         )}
@@ -159,7 +179,7 @@ export default function BoardView({ onSelectTask, selectedTaskId }: BoardViewPro
                   <div className="flex items-center gap-2 text-xs font-bold"><span>{column.icon}</span><span>{getTranslation(column.labelKey, lang)}</span></div>
                   <span className="rounded border border-[var(--border-main)] bg-[var(--bg-surface)] px-2 py-0.5 text-[10px] text-[var(--text-muted)]">{columnTasks.length}</span>
                 </div>
-                <div className="max-h-[31rem] flex-1 space-y-2.5 overflow-y-auto pr-1">
+                <div className="max-h-[31rem] flex-1 space-y-2.5 overflow-y-auto overflow-x-visible p-1.5 pr-1">
                   {columnTasks.map((task) => (
                     <div
                       key={task.id}
@@ -167,7 +187,7 @@ export default function BoardView({ onSelectTask, selectedTaskId }: BoardViewPro
                       onDragStart={(e) => { setDraggedTaskId(task.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', task.id); }}
                       onDragEnd={() => setDraggedTaskId(null)}
                       onClickCapture={(e) => { if (dragMovedRef.current) { e.stopPropagation(); e.preventDefault(); } }}
-                      className={`group relative select-none ${draggedTaskId === task.id ? 'opacity-60' : 'opacity-100'}`}
+                      className={`group relative select-none p-1 ${draggedTaskId === task.id ? 'opacity-60' : 'opacity-100'}`}
                     >
                       <TaskCard task={task} isSelected={task.id === selectedTaskId} onSelect={() => onSelectTask(task.id)} onDelete={() => { if (window.confirm(`Hapus task ${task.id}?`)) deleteTask(task.id); }} />
                       <div
