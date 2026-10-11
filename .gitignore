@@ -1,108 +1,82 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-
 # Dependencies
 node_modules/
-.pnp
+/.pnp
 .pnp.js
-.yarn/install-state.gz
 
-# Next.js
+# Next.js build output
 .next/
 out/
+
+# Production build
 build/
 dist/
 
-# Production
-*.tsbuildinfo
-
-# Environment variables (PALING PENTING — jangan sampai kehapus dari daftar ini)
+# Environment variables (Sangat Penting/Sensitif)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env*.local
+*.env.local
 
-# Vercel
-.vercel
-
-# Prisma
-prisma/*.db
-prisma/migrations/dev.db
-
-# PWA / next-pwa generated files
-public/sw.js
-public/workbox-*.js
-public/worker-*.js
-public/sw.js.map
-public/workbox-*.js.map
-
-# Testing
-coverage/
-
-# IDE / Editor
-.vscode/*
-!.vscode/extensions.json
-.idea/
-*.swp
-*.swo
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# IDEs/Editors
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# TypeScript
-*.tsbuildinfo
+# User request: Ignore README
+README.md
+readme.md
+
+# AI / Assistant files - jangan dipush
+CLAUDE.md
+AGENTS.md
+.cursor/
+.cursorrules
+.claude/
+.copilot/
+.gemini/
+.aider*
+.ai/
+*.ai
+
+# Next.js generated
 next-env.d.ts
+tsconfig.tsbuildinfo
 
-# Misc
-.turbo/
-.cache/
+# Secrets & Credentials (kerentanan tinggi)
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.csr
+secrets.json
+secrets.txt
+credentials.json
+serviceAccountKey.json
+*.sqlite
+*.sqlite3
+*.db
+
+# Other sensitive/temporary files
+.vercel
+.turbo
+*.log
+.npm
+coverage/
+
+# Optional: jika ada file rahasia custom
+secret*
+private*
