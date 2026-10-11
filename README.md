@@ -65,8 +65,5 @@ Buka [http://localhost:3000](http://localhost:3000).
 
 Project ini masih tahap awal. Saran dan laporan bug lewat Issues sangat diterima.
 
-## Lisensi
-
-*(Pilih lisensi, misalnya MIT.)*
 
 
